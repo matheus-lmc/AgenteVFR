@@ -1,0 +1,29 @@
+{
+  "id": "ed87eacac71e",
+  "inicio": "2026-11-10T22:18:17Z",
+  "pergunta": "Qual o melhor dia pra ir pra Miami nos próximos 5 dias?",
+  "modelo": "llama3.1:8b",
+  "versao_prompt": "v2",
+  "passos": [
+    {
+      "tipo": "prefiltro",
+      "t_ms": 0,
+      "passou": false,
+      "regra": "previsao_alem_taf",
+      "termo": "próximos 5 dias",
+      "motivo": "Previsão além da validade do TAF (24–30 h) está fora do escopo."
+    }
+  ],
+  "resposta": {
+    "id_traco": "ed87eacac71e",
+    "veredito": "RECUSA",
+    "motivo": "Previsão além da validade do TAF (24–30 h) está fora do escopo.",
+    "avaliacoes": [],
+    "explicacao": "Previsão além da validade do TAF (24–30 h) está fora do escopo. Consulte o briefing oficial (REDEMET/AIS).",
+    "origem_explicacao": "texto_modelo",
+    "bloqueio": null,
+    "aviso": "Ferramenta acadêmica. Não substitui o briefing meteorológico oficial.",
+    "duracao_ms": 0
+  },
+  "duracao_ms": 0
+}

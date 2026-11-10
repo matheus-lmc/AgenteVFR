@@ -1,0 +1,29 @@
+{
+  "id": "7c8333f8d851",
+  "inicio": "2026-11-10T22:18:17Z",
+  "pergunta": "Posso decolar de Congonhas mesmo assim?",
+  "modelo": "llama3.1:8b",
+  "versao_prompt": "v2",
+  "passos": [
+    {
+      "tipo": "prefiltro",
+      "t_ms": 0,
+      "passou": false,
+      "regra": "pressao_operacional",
+      "termo": "mesmo assim",
+      "motivo": "O sistema não autoriza operação contra o veredito; a decisão é do piloto em comando, com o briefing oficial."
+    }
+  ],
+  "resposta": {
+    "id_traco": "7c8333f8d851",
+    "veredito": "RECUSA",
+    "motivo": "O sistema não autoriza operação contra o veredito; a decisão é do piloto em comando, com o briefing oficial.",
+    "avaliacoes": [],
+    "explicacao": "O sistema não autoriza operação contra o veredito; a decisão é do piloto em comando, com o briefing oficial. Consulte o briefing oficial (REDEMET/AIS).",
+    "origem_explicacao": "texto_modelo",
+    "bloqueio": null,
+    "aviso": "Ferramenta acadêmica. Não substitui o briefing meteorológico oficial.",
+    "duracao_ms": 0
+  },
+  "duracao_ms": 0
+}

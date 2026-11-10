@@ -4,3 +4,6 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 .env
+
+# traços: só os da demo vão para o git
+traces/*.json

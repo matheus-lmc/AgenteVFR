@@ -33,7 +33,7 @@ antes de existir um requisito aprovado que o justifique e um teste que o verifiq
 |---|---|---|---|
 | 01 | Harness (decodificação, regra VMC/IMC, recusas, verificador) | `01-harness/` | concluído (155 testes verdes) |
 | 02 | Ferramentas (API aviationweather + cache) | `02-ferramentas/` | concluído (61 testes verdes + 1 ao vivo) |
-| 03 | Agente (loop, prompt, traço) | `03-agente/` | requisitos e design aprovados; testes em andamento |
+| 03 | Agente (loop, prompt, traço) | `03-agente/` | concluído (73 testes verdes; teste com Ollama real falha por H7, registrado) |
 | 04 | Interface + Docker | `04-interface/` | — |
 | 05 | Janela VFR pelo TAF (etapa 4b) | `05-janela-taf/` | — |
 
@@ -75,3 +75,23 @@ Preenchida no passo 5 de cada módulo.
 | REQ-F-07 cache | H2 | `test_req_f07_*` (10) | `CACHE_TTL_S`, `CACHE_IDADE_MAX_METAR_MIN`, `_cache_valido` |
 | REQ-F-08 resultado | — (traço) | `test_req_f08_*` (4) | `ResultadoBusca` |
 | REQ-F-09 testes sem rede | — | `test_req_f09_*` (2, 1 ao vivo) | `ClienteAWC(http=..., relogio=...)`, atalhos |
+
+### 03 — Agente, prompt e traço (`tests/test_agente.py`, `test_traco.py`, `test_prompts.py`; 73 testes verdes + 1 com Ollama real em 10/11/2026)
+
+| Requisito | Perigo | Testes | Código |
+|---|---|---|---|
+| REQ-A-01 pré-filtro antes do modelo | H4 | `test_req_a01_*` (5) | `Agente._responder` + `harness.prefiltrar_pergunta` |
+| REQ-A-02 ferramentas | — | `test_req_a02_*` (8) | `prompts.FERRAMENTAS`, `Agente._executar` |
+| REQ-A-03 janela (Context Eng.) | — | `test_req_a03_*` (4) | `Agente._executar` (só resumo + `nome_estacao`) |
+| REQ-A-04 limite de 5 chamadas | H6 | `test_req_a04_*` (2) | `MAX_CHAMADAS_FERRAMENTA` |
+| REQ-A-05 resposta sem consulta | H6 | `test_req_a05_*` (2) | `LEMBRETE_FERRAMENTA`, `sem_avaliacao` |
+| REQ-A-06 falha do modelo | — | `test_req_a06_*` (7) | `ClienteOllama`, `ErroModelo` |
+| REQ-A-07 veredito geral em código | H1 | `test_req_a07_*` (6) | `Agente._responder` |
+| REQ-A-08 recusa não é consertada | H1, H4 | `test_req_a08_*` (1) | `Agente._responder` |
+| REQ-A-09 verificação da explicação | H3 | `test_req_a09_*` (4) | `harness.verificar_explicacao`, `_RE_ICAO_BR` |
+| REQ-A-10 resposta | — | `test_req_a10_*` (2) | `RespostaAgente` |
+| REQ-A-11 chamada ao Ollama (rev.: `num_thread`) | — | `test_req_a11_*` (4) | `ClienteOllama.conversar` |
+| REQ-A-12 prompt versionado (rev.: v2) | — | `test_req_a12_*` (6) | `prompts.PROMPT_SISTEMA_V1/V2` |
+| REQ-A-13 traço | — | `test_req_a13_*` (11) | `app/traco.py` |
+| REQ-A-14 testes sem modelo / Ollama real | — | `test_req_a14_ollama_real` (**falha: H7**) | `ModeloRoteirizado` |
+| REQ-A-15 nome da estação | H7 (só transparência) | `test_req_a15_*` (11) | `_nome_estacao` |

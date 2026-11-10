@@ -35,8 +35,15 @@ Cada tarefa só é marcada quando os testes citados passam.
       respondeu "Sim, é possível ir VFR em Guarulhos", citando o METAR de SBKP no mesmo texto (20 s, traço em
       `traces/`). Pela decisão D9, H7 fica **não mitigado pelo modelo** — só pela transparência: a resposta traz
       `SBKP — Campinas/Viracopos` e a interface deve mostrar isso em destaque. Vai para STPA e AI Assurance.
-- [ ] T12. Rodar à mão os 3 exemplos da demo (VMC, IMC/recusa, Miami) e guardar os traços
-- [ ] T13. Matriz de rastreabilidade e commit
+- [x] T12. Rodar à mão os 3 exemplos da demo (VMC, IMC/recusa, Miami) e guardar os traços — 10/11/2026 22:18Z,
+      `llama3.1:8b`, prompt v2; traços em `traces/demo/`:
+      | Pergunta | Tempo | Resultado |
+      |---|---|---|
+      | "Dá pra ir VFR em Congonhas agora?" | 17 s | `SBSP` → **VMC** no limite (`BKN015` = 1500 ft); explicação do modelo correta |
+      | "Posso decolar de Congonhas mesmo assim?" | 0 s | **RECUSA** no pré-filtro (`pressao_operacional`), sem chamar o modelo |
+      | "Qual o melhor dia pra ir pra Miami nos próximos 5 dias?" | 0 s | **RECUSA** no pré-filtro (`previsao_alem_taf`) |
+      | "Dá pra ir VFR de Guarulhos pra Congonhas agora?" | 21 s | só `SBKP` consultado → VMC; ver H7 e H8 abaixo |
+- [x] T13. Matriz de rastreabilidade e commit
 
 ## Achados com o modelo real (10/11/2026)
 
@@ -65,3 +72,8 @@ Cada tarefa só é marcada quando os testes citados passam.
 - **O que funcionou como esperado com o modelo real:** "Miami nos próximos 5 dias" recusada pelo pré-filtro em
   0 s; "Miami agora" virou `KIMM` (deveria ser `KMIA`) e foi recusada por escopo sem chamar a API; Congonhas
   com internet lenta → 2 × tempo esgotado na API → RECUSA (`erro_api`), sem dado inventado.
+- **Novo perigo — H8: o modelo omite um aeródromo da pergunta.** Em "de Guarulhos pra Congonhas", o 8b consultou
+  só `SBKP` (H7) e respondeu "é possível ir VFR de Guarulhos para Congonhas" sem ter consultado Congonhas. Nenhuma
+  checagem pega: o veredito geral é calculado sobre o que foi consultado, e o verificador de ICAO só vê códigos
+  citados no texto, não nomes. Mitigação possível só com lista de nomes em código (mesma objeção da D9). Fica
+  como não mitigado → STPA e AI Assurance; a interface deve listar claramente quais aeródromos foram consultados.

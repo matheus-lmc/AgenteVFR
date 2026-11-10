@@ -15,16 +15,25 @@ Cada tarefa só é marcada quando os testes citados passam.
 
 ## Portão 4 — implementação (verde)
 
-- [ ] T8. Constantes, `Veredito`, dataclasses — H-10, H-12
-- [ ] T9. Normalização + cabeçalho + ordem das checagens — H-01 a H-06
-- [ ] T10. Corpo: corte em RMK/TEMPO/BECMG/NOSIG, visibilidade, nuvens — H-07 a H-09
-- [ ] T11. Regra VMC/IMC + motivo + resumo — H-10 a H-12
-- [ ] T12. `prefiltrar_pergunta` — H-13
-- [ ] T13. `verificar_explicacao` + `texto_modelo` — H-14, H-15
-- [ ] T14. `pytest` todo verde
+- [x] T8. Constantes, `Veredito`, dataclasses — H-10, H-12
+- [x] T9. Normalização + cabeçalho + ordem das checagens — H-01 a H-06
+- [x] T10. Corpo: corte em RMK/TEMPO/BECMG/NOSIG, visibilidade, nuvens — H-07 a H-09
+- [x] T11. Regra VMC/IMC + motivo + resumo — H-10 a H-12
+- [x] T12. `prefiltrar_pergunta` — H-13
+- [x] T13. `verificar_explicacao` + `texto_modelo` — H-14, H-15
+- [x] T14. `pytest` todo verde
 
 ## Portão 5 — fechamento
 
-- [ ] T15. Conferir os 10 casos obrigatórios contra METARs reais da API (campo `rawOb`), só como sanidade
-- [ ] T16. Preencher a matriz de rastreabilidade em `specs/README.md`
-- [ ] T17. Commit
+- [x] T15. Conferir os 10 casos obrigatórios contra METARs reais da API (campo `rawOb`), só como sanidade — 10/11/2026 13:44Z: 20 METARs reais, todos decodificados, teto igual ao campo `clouds` da API nos 20; todos VMC (horário diurno). `fltCat` da API = MVFR em 10 deles, que pela nossa regra são VMC (ex.: SBGR BKN021)
+- [x] T16. Preencher a matriz de rastreabilidade em `specs/README.md`
+- [x] T17. Commit
+
+## Achados para os próximos módulos
+
+- **Módulo 02 (ferramentas):** o METAR é horário (HH00Z) e a API levou ~44 min para ficar "velho" às 13:44Z.
+  Perto da virada da hora (HH:00–HH:05, antes do novo boletim chegar) a idade pode passar de 60 min e o
+  harness recusa com `dado_desatualizado`. O cache de 5 min não pode prolongar isso: ao receber um METAR com
+  mais de ~55 min, a ferramenta deve buscar de novo em vez de servir o cache. Avisar na demo para não cair
+  nessa janela.
+- **Avaliação:** às 13:44Z os 20 aeródromos estavam VMC. Casos IMC reais precisam da coleta na madrugada/manhã.

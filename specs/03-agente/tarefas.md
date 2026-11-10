@@ -9,10 +9,10 @@ Cada tarefa só é marcada quando os testes citados passam.
 
 ## Portão 3 — testes (vermelho)
 
-- [ ] T2. `pyproject.toml`: marcador `ollama` fora da execução padrão
-- [ ] T3. Esqueletos de `prompts.py`, `traco.py`, `agente.py`
-- [ ] T4. `tests/test_prompts.py`, `tests/test_traco.py`, `tests/test_agente.py`
-- [ ] T5. Rodar `pytest`: novos falham; os 216 anteriores continuam verdes
+- [x] T2. `pyproject.toml`: marcador `ollama` fora da execução padrão
+- [x] T3. Esqueletos de `prompts.py`, `traco.py`, `agente.py`
+- [x] T4. `tests/test_prompts.py`, `tests/test_traco.py`, `tests/test_agente.py`
+- [x] T5. Rodar `pytest`: novos falham; os 216 anteriores continuam verdes — 10/11/2026: 58 falham (54 `NotImplementedError`, 4 asserções sobre o esqueleto vazio); passam os 216 anteriores e 2 novos que o esqueleto já satisfaz (`TIPOS_PASSO`, prompt sem ICAO)
 
 ## Portão 4 — implementação (verde)
 

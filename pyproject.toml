@@ -1,5 +1,8 @@
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-markers = ["rede: testes que chamam a API real (rodar com: pytest -m rede)"]
-addopts = "-m 'not rede'"
+markers = [
+    "rede: testes que chamam a API real (rodar com: pytest -m rede)",
+    "ollama: testes que chamam o Ollama real (rodar com: pytest -m ollama)",
+]
+addopts = "-m 'not rede and not ollama'"

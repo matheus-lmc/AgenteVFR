@@ -20,7 +20,8 @@ veredito, verificação da explicação e registro de cada passo.
 ## 2. Perigos preliminares mitigados
 
 H1 (VMC quando é IMC), H3 (explicação contradiz o veredito), H4 (fora do escopo), H5 (dado inventado) — ver
-módulos 01 e 02. Novo neste módulo: **H6 — sistema dá resposta sem ter consultado dado algum.**
+módulos 01 e 02. Novos neste módulo: **H6 — sistema dá resposta sem ter consultado dado algum**; **H7 — o modelo
+mapeia o nome para o aeródromo errado** (seção 5).
 
 ## 3. Requisitos
 
@@ -51,6 +52,7 @@ módulos 01 e 02. Novo neste módulo: **H6 — sistema dá resposta sem ter cons
   busca falhar, `{icao, status, veredito: "RECUSA", motivo}`).
 - O resultado de `buscar_taf` na janela DEVE ser `{icao, status, taf_bruto, aviso}`.
 - O JSON bruto da API (`resposta_api`) NÃO DEVE entrar na janela em nenhum caso; ele vai só para o traço.
+- *Revisão 10/11/2026 (seção 5):* o resultado de `buscar_metar` com sucesso leva também `nome_estacao`.
 
 ### Loop
 
@@ -93,6 +95,7 @@ módulos 01 e 02. Novo neste módulo: **H6 — sistema dá resposta sem ter cons
   `explicacao` (texto final), `origem_explicacao` (`modelo` / `texto_modelo`), `bloqueio`
   (`{regra, trecho}` ou `null`), `aviso` fixo ("Ferramenta acadêmica. Não substitui o briefing meteorológico
   oficial."), `duracao_ms`.
+- *Revisão 10/11/2026 (seção 5):* cada item de `avaliacoes` leva também `nome_estacao`.
 
 ### Modelo e prompt
 
@@ -114,6 +117,8 @@ módulos 01 e 02. Novo neste módulo: **H6 — sistema dá resposta sem ter cons
   em português, em até 4 frases; lembrar que não substitui o briefing oficial.
 - O prompt NÃO DEVE conter tabela de nomes → ICAO. *[Decisão D5]* (O mapeamento é o que o modelo decide e é
   medido na avaliação.)
+- *Revisão 10/11/2026 (seção 5):* prompt atual passa a ser o `PROMPT_SISTEMA_V2` (`VERSAO_PROMPT = "v2"`), que
+  pede para conferir `nome_estacao`; o v1 continua no código.
 
 ### Traço
 
@@ -146,3 +151,52 @@ módulos 01 e 02. Novo neste módulo: **H6 — sistema dá resposta sem ter cons
 | D4 | Bloquear explicação que cita ICAO brasileiro não avaliado | Não checar | Pega um tipo de invenção com regra simples |
 | D5 | Sem tabela nome → ICAO no prompt | Tabela com ~20 aeródromos | Mantém a métrica de acerto de ICAO honesta |
 | D6 | `buscar_taf` entra só como informativo até o módulo 05; o verificador não checa o que o modelo diz do TAF | Tirar o TAF até o módulo 05 | O modelo pode errar ao ler o TAF; limite registrado para o AI Assurance |
+
+## 5. Revisão 1 — mitigação do H7 (aprovada em 10/11/2026)
+
+**Perigo H7 — o modelo mapeia o nome para o aeródromo errado.** Achado com o modelo real em 10/11/2026: o
+`llama3.1:8b` converte "Guarulhos" em `SBKP` (Campinas) de forma reprodutível; o veredito sai para Campinas e a
+explicação fala de Guarulhos. Nenhuma checagem atual pega: o ICAO é válido, brasileiro e foi avaliado.
+
+**Restrição encontrada:** o nome da estação que a API devolve não serve para comparação automática. Para
+`SBGR` ela diz `"Sao Paulo Intl, PR, BR"` (sem "Guarulhos" e com o estado errado); para `SBSP`,
+`"Sao Paulo/Congonhas, SP, BR"`; para `SBKP`, `"Campinas/Viracopos Arpt, SP, BR"`. Uma regra "o nome da
+pergunta tem que aparecer no nome da estação" bloquearia o próprio SBGR correto.
+
+Por isso a mitigação proposta é de **transparência**, e não de bloqueio: deixar o erro visível para o modelo
+(que pode se corrigir) e para o piloto (que confere o que foi avaliado).
+
+### Requisitos novos
+
+**REQ-A-15 — Nome da estação** (H7)
+- QUANDO `buscar_metar` tiver sucesso, o agente DEVE ler o nome da estação do campo `name` do primeiro elemento
+  de `resposta_api` (só para identificação; não entra no veredito, REQ-H-11).
+- O agente DEVE acrescentar `nome_estacao` ao que vai para a janela do modelo e a cada item de `avaliacoes` da
+  resposta. Sem nome na API → `nome_estacao = null`.
+- O agente NÃO DEVE usar `nome_estacao` para bloquear, aprovar ou mudar o veredito. *[Decisão D7]*
+
+### Requisitos alterados
+
+**REQ-A-03 — O que entra na janela** — a frase "exatamente o `Resumo.para_dict()` do harness" passa a ser
+"exatamente o `Resumo.para_dict()` do harness mais `nome_estacao`". O JSON bruto continua fora da janela.
+
+**REQ-A-10 — Resposta** — cada item de `avaliacoes` passa a ter `nome_estacao` além das chaves do resumo.
+
+**REQ-A-12 — Prompt v2** — novo prompt `PROMPT_SISTEMA_V2` (`VERSAO_PROMPT = "v2"`), igual ao v1 mais uma
+instrução: conferir se `nome_estacao` corresponde ao aeródromo da pergunta e, se não corresponder, chamar
+`buscar_metar` de novo com o código certo antes de responder. Continua sem tabela nome → ICAO (D5). O v1 fica no
+código para comparação na avaliação. *[Decisão D8]*
+
+### Critério de aceite com o modelo real
+
+- `test_req_a14_ollama_real` ("Dá pra ir VFR em Guarulhos agora?") passa a exigir que `SBGR` esteja avaliado.
+  Se o v2 não corrigir o `SBKP`, o teste continua falhando e o resultado vai para o AI Assurance como perigo
+  **não mitigado pelo modelo** (só pela transparência na interface). *[Decisão D9]*
+
+### Decisões da revisão 1 (confirmadas em 10/11/2026, opção proposta)
+
+| ID | Decisão proposta | Alternativa | Efeito |
+|---|---|---|---|
+| D7 | Nome da estação só informa (modelo e piloto); não bloqueia | Bloquear quando o nome da pergunta não aparece no nome da estação | A alternativa bloquearia o SBGR correto (a API diz "Sao Paulo Intl"); a proposta não garante a correção, mas torna o erro visível |
+| D8 | Prompt v2 pede ao modelo para conferir a estação; v1 preservado | Manter v1 e confiar só na interface | Dá ao modelo a chance de se corrigir e rende uma comparação v1 × v2 na avaliação |
+| D9 | Se o v2 não resolver, registrar H7 como não mitigado pelo modelo; nada de tabela de apelidos em código | Tabela de apelidos em código (ex.: Guarulhos → SBGR) para conferir o mapeamento | A tabela cobre só os nomes listados e mexe na métrica de acerto de ICAO; fica como trabalho futuro no artigo |

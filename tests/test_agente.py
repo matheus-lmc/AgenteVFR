@@ -449,7 +449,7 @@ def _capturar(**kwargs):
 
 
 def test_req_a11_corpo_da_requisicao(monkeypatch):
-    for var in ["OLLAMA_URL", "OLLAMA_MODEL", "OLLAMA_TEMPERATURA", "OLLAMA_TIMEOUT_S"]:
+    for var in ["OLLAMA_URL", "OLLAMA_MODEL", "OLLAMA_TEMPERATURA", "OLLAMA_NUM_THREAD", "OLLAMA_TIMEOUT_S"]:
         monkeypatch.delenv(var, raising=False)
     c, capturadas = _capturar()
     mensagens = [{"role": "user", "content": "oi"}]
@@ -459,7 +459,7 @@ def test_req_a11_corpo_da_requisicao(monkeypatch):
     corpo = json.loads(req.content)
     assert corpo["model"] == "llama3.1:8b"
     assert corpo["stream"] is False
-    assert corpo["options"] == {"temperature": 0.1, "seed": 42}
+    assert corpo["options"] == {"temperature": 0.1, "seed": 42, "num_thread": 4}
     assert corpo["tools"] == prompts.FERRAMENTAS
     assert corpo["messages"] == mensagens
     assert req.extensions["timeout"]["read"] == 300.0
@@ -469,6 +469,7 @@ def test_req_a11_configuracao_pelo_ambiente(monkeypatch):
     monkeypatch.setenv("OLLAMA_URL", "http://ollama:11434")
     monkeypatch.setenv("OLLAMA_MODEL", "llama3.2:3b")
     monkeypatch.setenv("OLLAMA_TEMPERATURA", "0")
+    monkeypatch.setenv("OLLAMA_NUM_THREAD", "3")
     monkeypatch.setenv("OLLAMA_TIMEOUT_S", "60")
     c, capturadas = _capturar()
     c.conversar([], [])
@@ -476,7 +477,15 @@ def test_req_a11_configuracao_pelo_ambiente(monkeypatch):
     assert str(capturadas[0].url) == "http://ollama:11434/api/chat"
     assert c.modelo == corpo["model"] == "llama3.2:3b"
     assert corpo["options"]["temperature"] == 0.0
+    assert corpo["options"]["num_thread"] == 3
     assert capturadas[0].extensions["timeout"]["read"] == 60.0
+
+
+def test_req_a11_num_thread_por_parametro(monkeypatch):
+    monkeypatch.setenv("OLLAMA_NUM_THREAD", "8")
+    c, capturadas = _capturar(num_thread=2)
+    c.conversar([], [])
+    assert json.loads(capturadas[0].content)["options"]["num_thread"] == 2
 
 
 def test_req_a11_resposta_devolvida_inteira():

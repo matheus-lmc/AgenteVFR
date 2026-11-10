@@ -30,7 +30,7 @@ pyproject.toml        # + marcador "ollama", fora da execução padrão
 ```jsonc
 // requisição
 {"model": "llama3.1:8b", "stream": false,
- "options": {"temperature": 0.1, "seed": 42},
+ "options": {"temperature": 0.1, "seed": 42, "num_thread": 4},
  "tools": [{"type": "function", "function": {"name": "buscar_metar", "description": "...",
             "parameters": {"type": "object", "properties": {"icao": {"type": "string", "description": "..."}},
                            "required": ["icao"]}}}],
@@ -101,7 +101,8 @@ class Traco:
 class ErroModelo(Exception): ...
 
 class ClienteOllama:
-    def __init__(self, *, url=None, modelo=None, temperatura=None, timeout_s=None, http=None): ...
+    def __init__(self, *, url=None, modelo=None, temperatura=None, num_thread=None, timeout_s=None,
+                 http=None): ...
     modelo: str
     def conversar(self, mensagens: list[dict], ferramentas: list[dict]) -> dict   # lança ErroModelo
 

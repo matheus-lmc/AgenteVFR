@@ -25,6 +25,7 @@ MAX_CARACTERES_PERGUNTA = 500   # REQ-A-01
 OLLAMA_URL_PADRAO = "http://localhost:11434"
 OLLAMA_MODEL_PADRAO = "llama3.1:8b"
 OLLAMA_TEMPERATURA_PADRAO = 0.1
+OLLAMA_NUM_THREAD_PADRAO = 4     # M3: 4 núcleos de desempenho; com 8 a geração fica ~60× mais lenta
 OLLAMA_TIMEOUT_PADRAO_S = 300.0  # CPU no Docker do Mac é lenta
 SEED = 42
 
@@ -51,13 +52,16 @@ class ErroModelo(Exception):
 
 class ClienteOllama:
     def __init__(self, *, url: str | None = None, modelo: str | None = None,
-                 temperatura: float | None = None, timeout_s: float | None = None,
-                 http: httpx.Client | None = None):
+                 temperatura: float | None = None, num_thread: int | None = None,
+                 timeout_s: float | None = None, http: httpx.Client | None = None):
         self.url = (url or os.environ.get("OLLAMA_URL") or OLLAMA_URL_PADRAO).rstrip("/")
         self.modelo = modelo or os.environ.get("OLLAMA_MODEL") or OLLAMA_MODEL_PADRAO
         if temperatura is None:
             temperatura = os.environ.get("OLLAMA_TEMPERATURA", OLLAMA_TEMPERATURA_PADRAO)
         self.temperatura = float(temperatura)
+        if num_thread is None:
+            num_thread = os.environ.get("OLLAMA_NUM_THREAD", OLLAMA_NUM_THREAD_PADRAO)
+        self.num_thread = int(num_thread)
         if timeout_s is None:
             timeout_s = os.environ.get("OLLAMA_TIMEOUT_S", OLLAMA_TIMEOUT_PADRAO_S)
         self.timeout_s = float(timeout_s)
@@ -65,7 +69,7 @@ class ClienteOllama:
 
     def conversar(self, mensagens: list[dict], ferramentas: list[dict]) -> dict:
         corpo = {"model": self.modelo, "messages": mensagens, "tools": ferramentas, "stream": False,
-                 "options": {"temperature": self.temperatura, "seed": SEED}}
+                 "options": {"temperature": self.temperatura, "seed": SEED, "num_thread": self.num_thread}}
         try:
             r = self._http.post(f"{self.url}/api/chat", json=corpo, timeout=self.timeout_s)
         except httpx.TransportError as e:

@@ -105,6 +105,7 @@ docker compose run --rm ollama-pull         # baixa llama3.1:8b e llama3.2:3b um
 | `OLLAMA_URL` | `http://localhost:11434` | no Compose: `http://ollama:11434` |
 | `OLLAMA_MODEL` | `llama3.1:8b` | alternativa leve: `llama3.2:3b` |
 | `OLLAMA_TEMPERATURA` | `0.1` | |
+| `OLLAMA_NUM_THREAD` | `4` | M3: 4 núcleos de desempenho; 8 threads deixa a geração ~60× mais lenta |
 | `OLLAMA_TIMEOUT_S` | `300` | CPU é lenta |
 | `AWC_BASE_URL` | `https://aviationweather.gov/api/data` | |
 | `AWC_TIMEOUT_S` | `10` | |

@@ -99,8 +99,12 @@ módulos 01 e 02. Novo neste módulo: **H6 — sistema dá resposta sem ter cons
 **REQ-A-11 — Chamada ao Ollama** (reprodutibilidade)
 - O agente DEVE chamar `POST {OLLAMA_URL}/api/chat` com `stream: false`, as ferramentas, `temperature` de
   `OLLAMA_TEMPERATURA` (padrão 0.1) e `seed` fixa (42).
-- URL, modelo, temperatura e tempo limite DEVEM vir de variáveis de ambiente (`OLLAMA_URL`
+- O agente DEVE mandar `num_thread` de `OLLAMA_NUM_THREAD` (padrão 4) nas opções.
+- URL, modelo, temperatura, threads e tempo limite DEVEM vir de variáveis de ambiente (`OLLAMA_URL`
   padrão `http://localhost:11434`, `OLLAMA_MODEL` padrão `llama3.1:8b`).
+- *Revisão 10/11/2026:* `num_thread` acrescentado. No M3 (4 núcleos de desempenho + 4 de eficiência) o padrão
+  do Ollama (8 threads) derrubou a geração do `llama3.2:3b` para 0,49 tok/s; com 4 threads, 31,7 tok/s
+  (medição em `tarefas.md`, seção "Achados com o modelo real").
 
 **REQ-A-12 — Prompt de sistema versionado** (Prompt Engineering)
 - O prompt de sistema DEVE ficar em `app/prompts.py` como constante com identificador de versão

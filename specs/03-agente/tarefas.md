@@ -26,7 +26,10 @@ Cada tarefa só é marcada quando os testes citados passam.
 
 ## Portão 5 — fechamento
 
-- [ ] T11. Teste `ollama` com o modelo real; medir tempo por pergunta com `llama3.1:8b` e `llama3.2:3b`
+- [ ] T11. Teste `ollama` com o modelo real; medir tempo por pergunta com `llama3.1:8b` e `llama3.2:3b` —
+      10/11/2026, com `num_thread=4` no código (REQ-A-11 revisado): `llama3.1:8b` respondeu em 16 s, mas
+      `test_req_a14_ollama_real` **falha** de forma reprodutível — o modelo avalia `SBKP` (Campinas) para
+      "Guarulhos" (perigo H7). O teste fica como está até a mitigação do H7 entrar.
 - [ ] T12. Rodar à mão os 3 exemplos da demo (VMC, IMC/recusa, Miami) e guardar os traços
 - [ ] T13. Matriz de rastreabilidade e commit
 

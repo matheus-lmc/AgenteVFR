@@ -31,9 +31,8 @@ Cada tarefa só é marcada quando os testes citados passam.
 
 ## Achados para os próximos módulos
 
-- **Módulo 02 (ferramentas):** o METAR é horário (HH00Z) e a API levou ~44 min para ficar "velho" às 13:44Z.
-  Perto da virada da hora (HH:00–HH:05, antes do novo boletim chegar) a idade pode passar de 60 min e o
-  harness recusa com `dado_desatualizado`. O cache de 5 min não pode prolongar isso: ao receber um METAR com
-  mais de ~55 min, a ferramenta deve buscar de novo em vez de servir o cache. Avisar na demo para não cair
-  nessa janela.
+- **Módulo 02 (ferramentas):** o METAR é horário (HH00Z). *Medido em 10/11/2026 (SBGR, 24 boletins):* a API
+  recebe o boletim de 0,4 a 4,7 min **antes** da hora nominal, então a idade normal fica abaixo de ~56 min.
+  Recusa por `dado_desatualizado` só acontece se um boletim atrasar ou faltar. O cache de 5 min não pode
+  empurrar a idade além de 60 min: METAR em cache com mais de 55 min deve ser buscado de novo (REQ-F-07).
 - **Avaliação:** às 13:44Z os 20 aeródromos estavam VMC. Casos IMC reais precisam da coleta na madrugada/manhã.

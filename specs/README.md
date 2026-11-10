@@ -31,7 +31,7 @@ antes de existir um requisito aprovado que o justifique e um teste que o verifiq
 
 | # | Módulo | Pasta | Estado |
 |---|---|---|---|
-| 01 | Harness (decodificação, regra VMC/IMC, recusas, verificador) | `01-harness/` | requisitos em revisão |
+| 01 | Harness (decodificação, regra VMC/IMC, recusas, verificador) | `01-harness/` | requisitos aprovados; design em revisão |
 | 02 | Ferramentas (API aviationweather + cache) | `02-ferramentas/` | — |
 | 03 | Agente (loop, prompt, traço) | `03-agente/` | — |
 | 04 | Interface + Docker | `04-interface/` | — |

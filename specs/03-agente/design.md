@@ -212,3 +212,62 @@ SBGR real) e de METARs sintéticos (IMC, recusa). Relógio fixo = `obsTime` da f
 | A-14 | `@pytest.mark.ollama`: "dá pra ir VFR em Guarulhos agora?" no Ollama real → `SBGR` avaliado e veredito VMC/IMC/RECUSA válido |
 
 Estimativa: ~55 testes.
+
+## 8. Revisão 1 — mitigação do H7 (aprovada em 10/11/2026)
+
+Requisitos: seção 5 de [requisitos.md](requisitos.md) (aprovada em 10/11/2026).
+
+### 8.1 Nome da estação (REQ-A-15)
+
+```python
+def _nome_estacao(resultado: ResultadoBusca) -> str | None:
+    # primeiro elemento de resposta_api, campo "name", texto não vazio → strip(); qualquer outra coisa → None
+```
+
+- `avaliacoes` passa a guardar `ICAO → (Resumo, nome_estacao)`; o veredito geral continua lendo só o `Resumo`.
+- Janela de `buscar_metar` com sucesso: `{**resumo.para_dict(), "nome_estacao": nome}`.
+- Janela de busca que falhou: **sem mudança** (`{icao, status, veredito, motivo}`) — não há estação para mostrar.
+- `RespostaAgente.avaliacoes`: `[{**resumo.para_dict(), "nome_estacao": nome}, ...]`; busca que falhou → `null`.
+- O passo `harness` do traço ganha `nome_estacao`. `harness.py` não muda (o `Resumo` continua com as chaves
+  do REQ-H-12).
+
+### 8.2 Prompt v2 (REQ-A-12)
+
+`PROMPT_SISTEMA_V2` = v1 com um passo novo (o 4) e a numeração ajustada. O v1 fica intacto em `prompts.py`.
+
+```
+Você é um assistente de briefing meteorológico VFR para aeródromos brasileiros, usado em um projeto acadêmico.
+
+Como trabalhar:
+1. Identifique os aeródromos citados na pergunta e converta cada um para o código ICAO de 4 letras.
+2. Chame buscar_metar para CADA aeródromo antes de responder. Não responda sem consultar.
+3. O resultado traz o campo "veredito" (VMC, IMC ou RECUSA), calculado por um módulo de regras.
+   Use esse veredito exatamente como veio. Nunca recalcule nem contradiga.
+4. O resultado traz "nome_estacao", o nome da estação na base meteorológica (pode vir em inglês ou abreviado).
+   Confira se é o aeródromo que a pergunta pediu. Se for outro aeródromo, chame buscar_metar de novo com o
+   código correto antes de responder.
+5. Se o veredito for RECUSA, diga apenas o motivo informado.
+6. Na explicação, cite o teto (teto_ft), a visibilidade (vis_m) e o METAR (metar_bruto) que vieram da
+   ferramenta. Não invente nenhum dado que não esteja no resultado.
+7. buscar_taf é só informativo: o TAF não muda o veredito.
+
+Responda em português do Brasil, em no máximo 4 frases. Termine lembrando que a consulta não substitui o
+briefing oficial (REDEMET/AIS) nem a decisão do piloto em comando.
+```
+
+Efeito esperado no caso real: o modelo pede `SBKP`, recebe `"nome_estacao": "Campinas/Viracopos Arpt, SP, BR"`,
+percebe que não é Guarulhos e chama de novo. Essa nova chamada conta no limite de 5 (REQ-A-04), e a avaliação
+que vale é a última por ICAO (REQ-A-07). Como `SBKP` foi avaliado, ele **continua** em `avaliacoes` — a
+interface vai mostrar os dois, cada um com seu nome. *(Consequência aceita: o piloto vê exatamente o que foi
+consultado.)*
+
+### 8.3 Testes
+
+| Requisito | Testes previstos |
+|---|---|
+| A-15 | nome lido de `resposta_api[0]["name"]`; ausente, vazio, não-texto ou `resposta_api` vazio → `null`; nome não muda o veredito (mesmo METAR com nome de outra cidade → mesmo veredito) |
+| A-03 (alterado) | janela de `buscar_metar` = resumo + `nome_estacao`; janela de busca que falhou continua sem `nome_estacao`; JSON bruto continua fora |
+| A-10 (alterado) | cada item de `avaliacoes` tem `nome_estacao` |
+| A-12 (alterado) | `VERSAO_PROMPT == "v2"`; `PROMPT_SISTEMA is PROMPT_SISTEMA_V2`; v1 continua existindo; v2 cita `nome_estacao`; nenhum dos dois tem código ICAO |
+| A-13 | passo `harness` do traço com `nome_estacao` |
+| A-14 | `test_req_a14_ollama_real` sem mudança (exige `SBGR`) — é o critério de aceite com o modelo real |

@@ -166,7 +166,9 @@ No resumo de uma recusa, os campos já decodificados até o ponto da recusa são
   `\bmesmo com\b`, `\bda um jeito\b`, `\bignor(e|a|ar|ando)\b`, `\bdesconsider\w*`,
   `\besquec\w* (a|as) regras?\b`, `\bfinj\w*`, `\bsem o harness\b`, `\bsemana que vem\b`,
   `\bproxima semana\b`, `\bdepois de amanha\b`, `\bdaqui a (\d+|dois|tres|quatro|cinco) dias\b`,
-  `\bmes que vem\b`.
+  `\bproxim[oa]s (\d+|dois|tres|quatro|cinco|seis|sete) dias\b`, `\bmes que vem\b`.
+  (*"próximos N dias" acrescentado no portão 3 para cobrir a pergunta da demo — "melhor dia pra Miami nos
+  próximos 5 dias".*)
 
 ## 6. `verificar_explicacao`
 
@@ -174,11 +176,12 @@ No resumo de uma recusa, os campos já decodificados até o ponto da recusa são
    a explicação é descartada (REQ-H-15). Não conta como bloqueio na avaliação.
 2. Explicação vazia ou só espaços → bloqueada, regra `explicacao_vazia`.
 3. Normaliza como no pré-filtro e procura expressões de duas listas:
-   - `FAVORAVEL`: `da (para|pra) voar (visual|vfr)`, `condic(ao|oes) vmc`, `em vmc`, `esta vmc`,
-     `vfr liberado`, `pode voar (vfr|visual)`, `e possivel voar (vfr|visual)`,
+   - `FAVORAVEL`: `da (para|pra) voar (visual|vfr)`, `condic(ao|oes) vmc`,
+     `(em|esta|estao|e|sao) vmc`, `vfr liberado`, `pode voar (vfr|visual)`, `e possivel voar (vfr|visual)`,
      `favorave(l|is) (ao|para o) voo visual`;
-   - `DESFAVORAVEL`: `condic(ao|oes) imc`, `em imc`, `esta imc`, `abaixo dos minimos`,
+   - `DESFAVORAVEL`: `condic(ao|oes) imc`, `(em|esta|estao|e|sao) imc`, `abaixo dos minimos`,
      `voo visual nao (e )?recomendado`.
+   (*`são/estão/é` acrescentados no portão 3: "as condições são VMC" não casava.*)
 4. **Polaridade**: cada ocorrência vale +1 (favorável) ou −1 (desfavorável). Se alguma das 3 palavras antes
    dela for `nao`, `nem`, `nunca` ou `jamais`, o sinal inverte. Assim "não é possível voar VFR" vira −1
    sem precisar de entrada própria na lista.

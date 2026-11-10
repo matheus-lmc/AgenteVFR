@@ -4,10 +4,11 @@ Cada tarefa só é marcada quando os testes citados passam.
 
 ## Portão 3 — testes (vermelho)
 
-- [ ] T1. `requirements.txt` com `fastapi`, `uvicorn`, `pydantic` fixados; instalar na `.venv`
-- [ ] T2. `app/main.py` só com `criar_app` e rotas respondendo 501; `app/static/index.html` mínimo
-- [ ] T3. `tests/test_main.py` (I-01 a I-05, I-11, I-16)
-- [ ] T4. Rodar `pytest`: novos falham; os anteriores continuam verdes
+- [x] T1. `requirements.txt` com `fastapi`, `uvicorn`, `pydantic` fixados; instalar na `.venv`
+- [x] T2. `app/main.py` só com `criar_app` e rotas respondendo 501; `app/static/index.html` mínimo
+- [x] T3. `tests/test_main.py` (I-01 a I-05, I-11, I-16)
+- [x] T4. Rodar `pytest`: novos falham; os anteriores continuam verdes — 10/11/2026: 34 falham (`NotImplementedError`);
+      291 passam (289 anteriores + os 2 que só leem o arquivo da página e o esqueleto já satisfaz)
 
 ## Portão 4 — implementação (verde)
 

@@ -31,7 +31,7 @@ Leia inteiro antes de começar.
 |---|---|
 | Prompt Engineering | prompt de sistema do agente (vai num slide) |
 | Context Engineering | o que entra na janela a cada passo: só dados compactos e o veredito, nunca o JSON bruto da API |
-| Agente com ferramenta | `buscar_metar`, `buscar_taf`, `avaliar_condicoes` via tool calling do Ollama |
+| Agente com ferramenta | `buscar_metar` (já devolve o veredito do harness) e `buscar_taf` (informativo) via tool calling do Ollama; `avaliar_janela` no módulo 05 |
 | Harness | regra VMC/IMC em código, checagem de idade do dado, escopo, verificador de contradição |
 | Análise de perigos assistida por LLM (STPA) | pasta `stpa/` |
 | RAG/avaliação com outro modelo julgando | modelo juiz com rubrica avaliando a fidelidade das explicações (`avaliacao/`) |

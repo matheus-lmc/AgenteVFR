@@ -4,12 +4,12 @@ Cada tarefa só é marcada quando os testes citados passam.
 
 ## Portão 3 — testes (vermelho)
 
-- [ ] T1. `requirements.txt` com `httpx` fixado; instalar na `.venv`
-- [ ] T2. Gravar fixtures da API real em `tests/fixtures/awc/` (METAR SBGR, METAR SBGR `hours=3`, TAF SBGR, 400)
-- [ ] T3. `pyproject.toml`: marcador `rede` fora da execução padrão
-- [ ] T4. `app/ferramentas.py` só com assinaturas e constantes
-- [ ] T5. `tests/test_ferramentas.py` (F-01 a F-09)
-- [ ] T6. Rodar `pytest` e registrar que os testes novos falham e os 155 do harness continuam verdes
+- [x] T1. `requirements.txt` com `httpx` fixado; instalar na `.venv`
+- [x] T2. Gravar fixtures da API real em `tests/fixtures/awc/` (METAR SBGR, METAR SBGR `hours=3`, TAF SBGR, 400)
+- [x] T3. `pyproject.toml`: marcador `rede` fora da execução padrão
+- [x] T4. `app/ferramentas.py` só com assinaturas e constantes
+- [x] T5. `tests/test_ferramentas.py` (F-01 a F-09)
+- [x] T6. Rodar `pytest` e registrar que os testes novos falham e os 155 do harness continuam verdes — 10/11/2026: 61 falham (60 `NotImplementedError`, 1 `PREFIXOS_BR` ausente), 155 verdes, 1 `rede` fora da execução
 
 ## Portão 4 — implementação (verde)
 

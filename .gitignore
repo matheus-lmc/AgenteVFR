@@ -7,3 +7,6 @@ __pycache__/
 
 # traços: só os da demo vão para o git
 traces/*.json
+
+# rascunhos visuais do superpowers (companheiro visual)
+.superpowers/

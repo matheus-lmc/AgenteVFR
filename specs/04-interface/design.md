@@ -20,10 +20,10 @@ Direção visual pesquisada com a skill **UI UX Pro Max** (`.claude/skills/ui-ux
 | DD8 | **Coluna única, até 880 px**, nesta ordem: aviso → pergunta → veredito → aeródromos consultados → explicação → traço → execuções gravadas | nosso (leitura de cima para baixo na apresentação) | duas colunas |
 | DD9 | **Aviso fixo como faixa âmbar no topo, presa ao rolar** | REQ-I-14 | rodapé (some ao rolar) |
 | DD10 | **Painéis recolhíveis com `<details>`/`<summary>` nativos** (teclado e leitor de tela de graça) | skill (acessibilidade) | componente próprio em JS |
-| DD11 | **Veredito em cartão grande** com a cor do veredito, ícone, palavra (VMC/IMC/RECUSA) e motivo; o cartão é a região `aria-live` | REQ-I-08, skill (região viva com mensagem completa) | só um selo pequeno |
-| DD12 | **"Aeródromos consultados" como tabela** (ICAO, estação, veredito, teto, visibilidade, METAR) logo abaixo do veredito, com aviso "Confira se é o aeródromo que você pediu" | H7/H8 | esconder dentro do traço |
-| DD13 | **Bloqueio do verificador como alerta âmbar** acima da explicação: "A explicação do modelo foi bloqueada (regra …, trecho …). Abaixo, texto gerado pelo sistema." | REQ-I-10 | só um ícone |
-| DD14 | **Espera**: botão vira "Consultando… 12 s" com contador; resto da página continua legível | skill (espera longa explicada) | spinner sem tempo |
+| DD11 | **Veredito: selo grande + números lado a lado** (escolha 1C): selo colorido com ícone e palavra; ao lado, teto e visibilidade contra o mínimo; o cartão é a região `aria-live` | REQ-I-08, escolha visual | cartão inteiro colorido (1A); cartão branco com faixa (1B) |
+| DD12 | **Aeródromos consultados: um cartão por aeródromo, nome da estação em destaque** (escolha 2B), com faixa lateral na cor do veredito, ICAO ao lado do nome, teto, visibilidade e METAR; título "confira se é o que você pediu" | H7/H8, escolha visual | tabela (2A) |
+| DD13 | **Bloqueio: antes × depois** (escolha 3B): alerta âmbar com a regra; o texto que o modelo escreveu aparece riscado, com o trecho marcado; abaixo, o texto gerado pelo sistema | REQ-I-10, escolha visual | só alerta + texto do sistema (3A) |
+| DD14 | **Espera: cartão no lugar do resultado** (escolha 5B) com "Consultando… N s" e uma frase explicando o que está acontecendo; botão desabilitado | escolha visual | contador só no botão (5A) |
 | DD15 | **Versões**: `fastapi==0.162.0` (23/10), `uvicorn==0.54.0` (25/09), `pydantic==2.14.1` (11/10), imagem `python:3.12.15-slim` | regra das 2 semanas | versões mais novas (menos de 2 semanas) |
 
 ## 2. Arquivos
@@ -84,8 +84,9 @@ Espaçamento em múltiplos de 8 px; texto base 16 px, altura de linha 1,5; alvos
 - **Renderização:** só `document.createElement` + `textContent` para dados da resposta e do traço; nenhum
   `innerHTML` com dado (REQ-I-11). Os SVG dos ícones são fixos no HTML.
 - **Veredito:** classe CSS escolhida pelo campo `veredito` (`VMC`/`IMC`/`RECUSA`); qualquer outro valor → erro.
-- **Traço:** ao abrir o `<details>`, busca `/api/traco/{id}` uma vez; cada passo vira um cartão com tipo, tempo e
-  conteúdo; mensagens da janela e JSON em `<pre>` recolhível; passos com `passou: false` ou `erro` em vermelho/âmbar.
+- **Traço (escolha 6B — tabela compacta):** ao abrir o `<details>`, busca `/api/traco/{id}` uma vez e monta uma
+  tabela `t | passo | resultado | tokens`; cada linha tem um `<details>` com o conteúdo completo (mensagens da
+  janela, argumentos, JSON) em `<pre>`; linhas com `passou: false` ou `erro` em destaque.
 - **Execuções gravadas:** lista de `/api/demo`; ao clicar, monta o resultado a partir de `traco.resposta` e
   mostra a etiqueta "Execução gravada em <data/hora UTC>".
 - **Saúde:** ao carregar, `GET /api/saude`; selo no cabeçalho "Modelo pronto" / "Ollama indisponível".
@@ -114,3 +115,21 @@ Espaçamento em múltiplos de 8 px; texto base 16 px, altura de linha 1,5; alvos
 | I-16 | `index.html` sem `http://`/`https://` em `src`, `href` ou `@import` |
 | I-07–I-15 | conferência no navegador do app (capturas em 360 px e 1280 px, teclado, os 3 exemplos, execução gravada, Ollama desligado) |
 | I-17–I-19 | `docker compose up`; 5 perguntas pela página; tempo médio registrado |
+
+## 8. Escolhas visuais (10/11/2026, companheiro visual do superpowers)
+
+| Grupo | Escolha | Opção descartada |
+|---|---|---|
+| 1. Cartão do veredito | **C — selo grande + teto e visibilidade contra o mínimo** | A cartão cheio colorido; B cartão branco com faixa |
+| 2. Aeródromos consultados | **B — um cartão por aeródromo, nome da estação em destaque** | A tabela |
+| 3. Bloqueio do verificador | **B — antes × depois (texto do modelo riscado + texto do sistema)** | A só alerta + texto do sistema |
+| 4. Aviso fixo | **A — faixa âmbar presa no topo** | B linha discreta repetida junto do veredito |
+| 5. Espera | **B — cartão de espera no lugar do resultado, explicando o que acontece** | A contador só no botão |
+| 6. Traço da execução | **B — tabela compacta** (cada linha expande o conteúdo) | A linha do tempo vertical |
+
+Mockups em `.superpowers/brainstorm/` (fora do git).
+
+**Consequência da escolha 3B:** a resposta do agente (`RespostaAgente`) não traz o texto bloqueado — só
+`bloqueio = {regra, trecho}`. A página busca o texto original no traço (`/api/traco/{id}`, conteúdo da última
+resposta do passo `modelo`, formato definido no REQ-A-13). Se o traço não abrir, mostra só o trecho. O módulo 03
+não muda.

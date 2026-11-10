@@ -42,6 +42,9 @@ O usuário pergunta em linguagem natural (ex.: "dá pra ir VFR de Guarulhos pra 
 O agente identifica os aeródromos, busca METAR/TAF, um **módulo em código** decide VMC/IMC,
 e o modelo **só explica** a decisão.
 
+Também responde "qual a melhor janela para voar VFR em <aeródromo> nas próximas horas?", limitado à
+validade do TAF (24–30 h). O harness decodifica o TAF e calcula VMC/IMC por período; o modelo só explica.
+
 ### O que o modelo decide
 - interpretar a pergunta e mapear nomes de aeródromos para códigos ICAO;
 - quais ferramentas chamar e em que ordem;
@@ -58,6 +61,9 @@ e o modelo **só explica** a decisão.
    que dá para voar visual), a explicação é bloqueada e substituída por um texto-modelo gerado em código;
    o bloqueio é registrado no traço. Começar com regras (palavras/expressões) e, se der tempo, um segundo
    passe com o LLM como checador.
+7. **Janela pelo TAF**: VMC/IMC de cada período do TAF calculado em código com a mesma regra de mínimos.
+   `TEMPO` e `PROB30/40` contam como pior caso (se o trecho temporário é IMC, o período é IMC).
+   Pedido além da validade do TAF → recusa, com a oferta da janela disponível.
 
 O veredito exibido na interface vem **sempre** do código, nunca do texto do modelo.
 
@@ -214,6 +220,7 @@ Guardar os prompts usados em `prompts_stpa.md` e marcar o que o grupo alterou na
 - **Sucesso**: aeródromo em VMC, veredito verde e explicação coerente, mostrando o traço.
 - **Caso que não fecha**: METAR desatualizado, aeródromo estrangeiro ou "posso decolar mesmo assim?" → recusa;
   e/ou um IMC em que o verificador bloqueia uma explicação contraditória.
+- "Qual o melhor dia pra ir pra Miami nos próximos 5 dias?" → recusa dupla (fora do Brasil + além do TAF).
 - Gravar vídeo curto de backup da demo e colocar no slide.
 
 ## AI Assurance (limites para o artigo)
@@ -225,6 +232,8 @@ Guardar os prompts usados em `prompts_stpa.md` e marcar o que o grupo alterou na
 - Dependência da disponibilidade e da atualização da API.
 - Verificador de contradição baseado em regras pode deixar passar paráfrases.
 - Juiz é o mesmo modelo; conjunto de avaliação pequeno.
+- Janela pelo TAF é previsão, não observação; a regra de pior caso pode ser conservadora demais
+  (marca IMC um período em que o TEMPO tem 30% de chance).
 
 ## Ordem de trabalho
 
@@ -232,6 +241,8 @@ Guardar os prompts usados em `prompts_stpa.md` e marcar o que o grupo alterou na
 2. `ferramentas.py` (confirmar o schema da API) + cache.
 3. `agente.py` + `prompts.py` + `traco.py`, testados com o Ollama do Compose.
 4. `main.py` + `static/index.html` + Docker Compose; `docker compose up` e demo funcionando; medir tempo médio por pergunta.
+4b. Janela VFR pelo TAF (`specs/05-janela-taf/`): decodificação do TAF, veredito por período, ferramenta
+    `avaliar_janela` para o agente, exemplo na interface.
 5. Avaliação: coletar, rotular (grupo), rodar métricas.
 6. STPA.
 7. `docs/roteiro_apresentacao.md` (10 min) e slides.

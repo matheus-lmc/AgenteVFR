@@ -45,13 +45,16 @@ TAF (o TAF é repassado como texto e **não** entra no veredito); o loop do agen
 
 **REQ-H-02 — Ordem das checagens** (H1, H2, H4)
 - O harness DEVE aplicar as checagens nesta ordem e devolver a **primeira** recusa encontrada:
-  1. formato (ICAO e horário identificáveis) → `formato_invalido`
+  1. ICAO identificável → `formato_invalido`
   2. escopo geográfico → `fora_do_escopo`
   3. ICAO do boletim igual ao solicitado → `icao_divergente`
-  4. boletim NIL → `sem_dado`
-  5. horário no futuro → `horario_futuro`
-  6. idade → `dado_desatualizado`
-  7. campos meteorológicos → `visibilidade_indisponivel`, `teto_indisponivel`, `nuvens_indisponiveis`
+  4. horário `DDHHMMZ` identificável e válido → `formato_invalido`
+  5. boletim NIL → `sem_dado`
+  6. horário no futuro → `horario_futuro`
+  7. idade → `dado_desatualizado`
+  8. campos meteorológicos → `visibilidade_indisponivel`, `teto_indisponivel`, `nuvens_indisponiveis`
+- *Revisão 10/11/2026:* ICAO e horário separados (antes eram um passo só, o que impedia o caso KJFK);
+  NIL passou para depois do horário.
 - A recusa por escopo DEVE ocorrer mesmo que o restante do boletim seja inválido (ex.: `METAR KJFK ...`).
 
 **REQ-H-03 — Escopo geográfico** (H4)

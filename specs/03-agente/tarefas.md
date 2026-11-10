@@ -16,11 +16,11 @@ Cada tarefa só é marcada quando os testes citados passam.
 
 ## Portão 4 — implementação (verde)
 
-- [ ] T6. `prompts.py` — A-12
-- [ ] T7. `traco.py` — A-13
-- [ ] T8. `ClienteOllama` — A-06, A-11
-- [ ] T9. Loop, `_executar`, veredito geral e verificação — A-01 a A-10
-- [ ] T10. `pytest` todo verde
+- [x] T6. `prompts.py` — A-12
+- [x] T7. `traco.py` — A-13
+- [x] T8. `ClienteOllama` — A-06, A-11
+- [x] T9. Loop, `_executar`, veredito geral e verificação — A-01 a A-10
+- [x] T10. `pytest` todo verde
 
 ## Portão 5 — fechamento
 

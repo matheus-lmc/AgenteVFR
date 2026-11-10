@@ -34,7 +34,7 @@ antes de existir um requisito aprovado que o justifique e um teste que o verifiq
 | 01 | Harness (decodificação, regra VMC/IMC, recusas, verificador) | `01-harness/` | concluído (155 testes verdes) |
 | 02 | Ferramentas (API aviationweather + cache) | `02-ferramentas/` | concluído (61 testes verdes + 1 ao vivo) |
 | 03 | Agente (loop, prompt, traço) | `03-agente/` | concluído (73 testes verdes; teste com Ollama real falha por H7, registrado) |
-| 04 | Interface + Docker | `04-interface/` | requisitos aprovados; design em andamento |
+| 04 | Interface + Docker | `04-interface/` | concluído (36 testes verdes; Compose medido: 15,2 s por pergunta) |
 | 05 | Janela VFR pelo TAF (etapa 4b) | `05-janela-taf/` | — |
 
 ## Matriz de rastreabilidade
@@ -95,3 +95,27 @@ Preenchida no passo 5 de cada módulo.
 | REQ-A-13 traço | — | `test_req_a13_*` (11) | `app/traco.py` |
 | REQ-A-14 testes sem modelo / Ollama real | — | `test_req_a14_ollama_real` (**falha: H7**) | `ModeloRoteirizado` |
 | REQ-A-15 nome da estação | H7 (só transparência) | `test_req_a15_*` (11) | `_nome_estacao` |
+
+### 04 — Interface e Docker (`tests/test_main.py`, 36 testes verdes + conferência no navegador em 10/11/2026)
+
+| Requisito | Perigo | Testes / verificação | Código |
+|---|---|---|---|
+| REQ-I-01 página | — | `test_req_i01_*` (1) | `pagina()` em `app/main.py` |
+| REQ-I-02 pergunta | — | `test_req_i02_*` (10) | `perguntar()`, `Pergunta(StrictStr)` |
+| REQ-I-03 traço (id validado antes do disco) | — | `test_req_i03_*` (10) | `_RE_ID_TRACO`, `traco()` |
+| REQ-I-04 execuções gravadas | — | `test_req_i04_*` (3) | `demo()` |
+| REQ-I-05 saúde | — | `test_req_i05_*` (8) | `verificar_saude_ollama()` |
+| REQ-I-06 fábrica | — | `test_req_i06_*` (1) | `criar_app()` |
+| REQ-I-07 pergunta e exemplos | — | `test_req_i07_*` (1) + navegador | `index.html` |
+| REQ-I-08 veredito (1C) | H1 | navegador | `cartaoVeredito()` |
+| REQ-I-09 aeródromos consultados (2B) | H7, H8 (transparência) | navegador | `cartaoAerodromos()` |
+| REQ-I-10 explicação e bloqueio (3B) | H3 | navegador (simulado) | `cartaoExplicacao()`, `preencherTextoBloqueado()` |
+| REQ-I-11 texto como texto | H9 | `test_req_i11_*` (1) | `el()` com `textContent` |
+| REQ-I-12 traço (6B) | — | navegador | `abrirTraco()` |
+| REQ-I-13 execuções gravadas na página | — | navegador | `carregarDemo()`, `abrirGravada()` |
+| REQ-I-14 avisos e erros (4A, 5B) | — | navegador (parcial) | `.aviso`, `mostrarEspera()`, `mostrarErro()` |
+| REQ-I-15 acessibilidade | — | contraste calculado; 375 px conferido | CSS |
+| REQ-I-16 sem recurso externo | — | `test_req_i16_*` (1) | `index.html` |
+| REQ-I-17 imagem | — | `docker compose build` | `Dockerfile` |
+| REQ-I-18 Compose | — | `docker compose up` + saúde no contêiner | `docker-compose.yml` |
+| REQ-I-19 tempo por pergunta | — | 5 perguntas: média 15,2 s | `tarefas.md` |

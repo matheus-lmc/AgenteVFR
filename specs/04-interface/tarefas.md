@@ -12,13 +12,29 @@ Cada tarefa só é marcada quando os testes citados passam.
 
 ## Portão 4 — implementação (verde)
 
-- [ ] T5. Rotas da API — I-01 a I-06
-- [ ] T6. `index.html` — I-07 a I-16
-- [ ] T7. `Dockerfile`, `.dockerignore`, serviço `app` no Compose — I-17, I-18
-- [ ] T8. `pytest` todo verde
+- [x] T5. Rotas da API — I-01 a I-06
+- [x] T6. `index.html` — I-07 a I-16
+- [x] T7. `Dockerfile`, `.dockerignore`, serviço `app` no Compose — I-17, I-18
+- [x] T8. `pytest` todo verde
 
 ## Portão 5 — fechamento
 
-- [ ] T9. Conferência no navegador (360 px e 1280 px, teclado, exemplos, execução gravada, Ollama desligado)
-- [ ] T10. `docker compose up` e 5 perguntas pela página; tempo médio — I-19
-- [ ] T11. Matriz de rastreabilidade e commit
+- [x] T9. Conferência no navegador (360 px e 1280 px, teclado, exemplos, execução gravada, Ollama desligado) —
+      10/11/2026, navegador do app: página, saúde ("Modelo pronto"), execuções gravadas, cartão 1C, aeródromos 2B
+      (caso SBKP/Campinas bem visível), traço 6B e bloqueio 3B (simulado no console com o texto real de um traço)
+      conferidos; 375 px sem rolagem horizontal. Corrigidos na conferência: resultado escondido atrás da faixa
+      fixa (`scroll-margin-top`) e "teto sem teto" no cartão do aeródromo. *Não conferidos:* teclado em detalhe e
+      Ollama desligado.
+- [x] T10. `docker compose up` e 5 perguntas pela página; tempo médio — I-19 — 10/11/2026, `docker compose up`
+      com `app` + `ollama`, 5 perguntas pela API do contêiner (`llama3.1:8b`, 4 threads):
+      **média 15,2 s**, mediana 15,4 s, mín. 13,1 s, máx. 17,6 s. Traços gravados em `./traces` pelo contêiner.
+- [x] T11. Matriz de rastreabilidade e commit
+
+## Achados (10/11/2026)
+
+- **Acerto de ICAO do `llama3.1:8b` é baixo (reforça H7).** Nas 5 perguntas da medição, só Congonhas → `SBSP`
+  estava certo. Curitiba → `SSCW`, Porto Alegre → `SSAA` e Brasília → `SBTL` (todos errados; o sistema recusou por
+  falta de dado, sem veredito). **Santos Dumont → `SBSP`**: saiu VMC de Congonhas, e só o nome da estação na tela
+  denuncia o erro. Medir isso direito é tarefa da avaliação (acerto de ICAO); para a demo, usar Congonhas.
+- Aviso do `starlette`: `TestClient` com `httpx` está obsoleto (sugere `httpx2`). Não afeta o app; revisitar se
+  atualizar o FastAPI.

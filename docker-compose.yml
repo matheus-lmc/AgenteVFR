@@ -1,5 +1,4 @@
 # AgenteVFR — Ollama roda neste Compose (só CPU no Mac; ver CLAUDE.md, seção Stack).
-# O serviço "app" entra na Etapa 4.
 
 services:
   ollama:
@@ -27,6 +26,22 @@ services:
     entrypoint: ["sh", "-c", "ollama pull llama3.1:8b && ollama pull llama3.2:3b"]
     restart: "no"
     profiles: ["setup"]
+
+  # Página + API (REQ-I-18). Abrir http://localhost:8000
+  app:
+    build: .
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: llama3.1:8b
+      OLLAMA_NUM_THREAD: "4"
+      TRACES_DIR: /app/traces
+    volumes:
+      - ./traces:/app/traces
+    ports:
+      - "127.0.0.1:8000:8000"
 
 volumes:
   ollama_data:

@@ -1,1 +1,443 @@
-<!-- esqueleto: a página entra no portão 4 -->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgenteVFR — briefing VFR</title>
+<!--
+  Especificação: specs/04-interface/requisitos.md e design.md (escolhas visuais 1C, 2B, 3B, 4A, 5B, 6B).
+  Regras: nenhum recurso externo (REQ-I-16); dado da API só entra como texto (REQ-I-11);
+  o veredito exibido vem só do campo "veredito" da resposta (REQ-I-08).
+-->
+<style>
+  :root {
+    --fundo: #F0F9FF; --cartao: #FFFFFF; --texto: #0F172A; --texto-apagado: #475569; --borda: #64748B;
+    --borda-suave: #CBD5E1; --primario: #0369A1; --vmc: #15803D; --imc: #B91C1C; --recusa: #475569;
+    --aviso: #F59E0B; --bloqueio-fundo: #FEF3C7; --bloqueio-texto: #78350F; --bloqueio-borda: #B45309;
+    --erro-fundo: #FEE2E2; --erro-texto: #7F1D1D;
+    --fonte: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--texto); font: 16px/1.5 var(--fonte); }
+  h1, h2, h3 { line-height: 1.25; margin: 0; }
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.125rem; }
+  button, input { font: inherit; }
+  :focus-visible { outline: 3px solid var(--primario); outline-offset: 2px; }
+  .visualmente-oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .mono { font-family: var(--mono); font-size: .875rem; }
+  .apagado { color: var(--texto-apagado); }
+  .pequeno { font-size: .875rem; }
+
+  /* 4A — faixa de aviso presa no topo */
+  .aviso { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: center; gap: 8px;
+           background: var(--aviso); color: var(--texto); font-weight: 600; padding: 8px 16px; text-align: center; }
+
+  .pagina { max-width: 880px; margin: 0 auto; padding: 16px; }
+  #resultado, #painel-traco { scroll-margin-top: 64px; }  /* não esconder atrás da faixa de aviso */
+  .cabecalho { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 8px 0 16px; }
+  .saude { display: inline-flex; align-items: center; gap: 6px; font-size: .875rem; border: 1px solid var(--borda-suave);
+           background: var(--cartao); border-radius: 999px; padding: 4px 12px; }
+  .saude::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--borda); }
+  .saude.ok::before { background: var(--vmc); }
+  .saude.falha::before { background: var(--imc); }
+
+  .cartao { background: var(--cartao); border: 1px solid var(--borda-suave); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  label { font-weight: 600; display: block; margin-bottom: 6px; }
+  .linha { display: flex; flex-wrap: wrap; gap: 8px; }
+  #pergunta { flex: 1 1 260px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--borda); border-radius: 6px; background: #fff; color: var(--texto); }
+  .botao { min-height: 44px; padding: 8px 20px; border: 0; border-radius: 6px; background: var(--primario); color: #fff; font-weight: 600; cursor: pointer; }
+  .botao:disabled, .exemplo:disabled { opacity: .6; cursor: not-allowed; }
+  .exemplos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+  .exemplo { min-height: 44px; padding: 6px 12px; border: 1px solid var(--borda); border-radius: 6px; background: #fff; color: var(--texto); cursor: pointer; text-align: left; }
+  .exemplo:hover:not(:disabled) { border-color: var(--primario); }
+
+  /* 5B — cartão de espera */
+  .espera { border-style: dashed; border-color: var(--borda); }
+
+  /* 1C — selo grande + números contra o mínimo */
+  .veredito { display: flex; flex-wrap: wrap; align-items: stretch; gap: 16px; }
+  .selo-grande { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+                 min-width: 128px; padding: 12px 16px; border-radius: 8px; color: #fff; font-size: 1.75rem; font-weight: 800; letter-spacing: .02em; }
+  .v-VMC { background: var(--vmc); } .v-IMC { background: var(--imc); } .v-RECUSA { background: var(--recusa); }
+  .veredito-corpo { flex: 1 1 280px; }
+  .metricas { display: flex; flex-wrap: wrap; gap: 8px 32px; margin-bottom: 8px; }
+  .metrica-rotulo { font-size: .875rem; color: var(--texto-apagado); }
+  .metrica-valor { font-size: 1.25rem; font-weight: 700; }
+  .etiqueta { display: inline-block; font-size: .8125rem; border: 1px solid var(--borda); border-radius: 4px; padding: 0 6px; margin-bottom: 8px; color: var(--texto-apagado); }
+  .selo { display: inline-flex; align-items: center; gap: 4px; color: #fff; font-weight: 700; font-size: .875rem; border-radius: 4px; padding: 1px 8px; }
+
+  /* 2B — um cartão por aeródromo */
+  .aerodromo { border: 1px solid var(--borda-suave); border-left-width: 6px; border-radius: 8px; padding: 12px; margin-top: 8px; }
+  .aerodromo.b-VMC { border-left-color: var(--vmc); } .aerodromo.b-IMC { border-left-color: var(--imc); } .aerodromo.b-RECUSA { border-left-color: var(--recusa); }
+  .aerodromo-nome { font-size: 1.125rem; font-weight: 700; }
+  .metar { font-family: var(--mono); font-size: .8125rem; color: var(--texto-apagado); overflow-wrap: anywhere; margin-top: 4px; }
+
+  /* 3B — bloqueio antes × depois */
+  .alerta { background: var(--bloqueio-fundo); color: var(--bloqueio-texto); border: 1px solid var(--bloqueio-borda); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+  .descartado { text-decoration: line-through; white-space: pre-line; }
+  .descartado mark { background: #FDE68A; color: inherit; }
+  .explicacao { white-space: pre-line; }
+  .erro { background: var(--erro-fundo); color: var(--erro-texto); border-color: var(--erro-texto); }
+
+  /* 6B — traço em tabela compacta */
+  summary { cursor: pointer; font-weight: 700; min-height: 32px; }
+  .tabela-wrap { overflow-x: auto; margin-top: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: .875rem; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--borda-suave); vertical-align: top; }
+  th { color: var(--texto-apagado); font-weight: 600; }
+  td details summary { font-weight: 400; }
+  td pre { font-family: var(--mono); font-size: .75rem; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--fundo); padding: 8px; border-radius: 6px; max-height: 360px; overflow: auto; }
+  tr.linha-alerta td { background: var(--bloqueio-fundo); color: var(--bloqueio-texto); }
+
+  #lista-demo { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
+  #lista-demo button { width: 100%; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .botao, .exemplo { transition: border-color .15s ease, opacity .15s ease; }
+  }
+</style>
+</head>
+<body>
+
+<div class="aviso" role="note">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg>
+  Ferramenta acadêmica. Não substitui o briefing meteorológico oficial.
+</div>
+
+<div class="pagina">
+  <header class="cabecalho">
+    <div>
+      <h1>AgenteVFR</h1>
+      <p class="apagado pequeno" style="margin:0">Briefing VFR de aeródromos brasileiros — o modelo explica, o código decide.</p>
+    </div>
+    <span id="saude" class="saude" role="status">Verificando o modelo…</span>
+  </header>
+
+  <main>
+    <section class="cartao" aria-labelledby="t-pergunta">
+      <h2 id="t-pergunta" class="visualmente-oculto">Pergunta</h2>
+      <form id="form" novalidate>
+        <label for="pergunta">Sua pergunta</label>
+        <div class="linha">
+          <input id="pergunta" name="pergunta" maxlength="500" autocomplete="off" aria-describedby="contador"
+                 placeholder="Ex.: Dá pra ir VFR em Congonhas agora?">
+          <button id="enviar" class="botao" type="submit">Perguntar</button>
+        </div>
+        <div id="contador" class="apagado pequeno" style="margin-top:4px">0/500 caracteres</div>
+      </form>
+      <div class="exemplos">
+        <span class="apagado pequeno">Exemplos:</span>
+        <button type="button" class="exemplo" data-pergunta="Dá pra ir VFR em Congonhas agora?">Dá pra ir VFR em Congonhas agora?</button>
+        <button type="button" class="exemplo" data-pergunta="Posso decolar de Congonhas mesmo assim?">Posso decolar de Congonhas mesmo assim?</button>
+        <button type="button" class="exemplo" data-pergunta="Qual o melhor dia pra ir pra Miami nos próximos 5 dias?">Qual o melhor dia pra ir pra Miami nos próximos 5 dias?</button>
+      </div>
+    </section>
+
+    <section id="resultado" aria-live="polite" aria-busy="false"></section>
+
+    <details id="painel-traco" class="cartao" hidden>
+      <summary>Traço da execução</summary>
+      <div id="traco-conteudo"><p class="apagado">Abrindo o traço…</p></div>
+    </details>
+
+    <section class="cartao" aria-labelledby="t-gravadas">
+      <h2 id="t-gravadas">Execuções gravadas</h2>
+      <p class="apagado pequeno" style="margin:4px 0 0">Rodadas reais guardadas como prova e plano B: abrem sem chamar o modelo.</p>
+      <ul id="lista-demo"><li class="apagado pequeno">Carregando…</li></ul>
+    </section>
+  </main>
+</div>
+
+<!-- Ícones reaproveitados pelo script (clonados; nenhum HTML é montado a partir de dado). -->
+<div hidden>
+  <svg id="icone-VMC" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7 12.5l3.2 3L17 9"/></svg>
+  <svg id="icone-IMC" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M8 2h8l6 6v8l-6 6H8l-6-6V8z"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+  <svg id="icone-RECUSA" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M5 19L19 5"/></svg>
+</div>
+
+<script>
+"use strict";
+const VEREDITOS = ["VMC", "IMC", "RECUSA"];
+const TEMPO_LIMITE_MS = 330000;  // maior que os 300 s do Ollama (REQ-I-14)
+const $ = (id) => document.getElementById(id);
+let tracoAtual = null;           // { id, dados } do traço do resultado na tela
+
+// Cria elementos só com texto (REQ-I-11): nada de HTML vindo de dado.
+function el(tag, props = {}, ...filhos) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "classe") n.className = v;
+    else if (k === "texto") n.textContent = v;
+    else n.setAttribute(k, v);
+  }
+  for (const f of filhos) if (f !== null && f !== undefined) n.append(f);
+  return n;
+}
+function icone(veredito) { return $("icone-" + veredito).cloneNode(true); }
+function limpar(n) { n.replaceChildren(); }
+function fmtTeto(t) { return t === null || t === undefined ? "sem teto" : `${t} ft`; }
+function fmtVis(v) { return v === null || v === undefined ? "—" : `${v} m`; }
+function fmtData(iso) {
+  if (!iso) return "";
+  const [d, h] = iso.replace("Z", "").split("T");
+  const [a, m, dia] = d.split("-");
+  return `${dia}/${m}/${a} ${h.slice(0, 5)} UTC`;
+}
+function seloPequeno(v) {
+  return el("span", { classe: "selo v-" + v }, v);
+}
+
+// ---------------------------------------------------------------- saúde do modelo (REQ-I-14)
+async function verificarSaude() {
+  const s = $("saude");
+  try {
+    const r = await fetch("/api/saude");
+    const d = await r.json();
+    if (!d.ollama) { s.className = "saude falha"; s.textContent = "Ollama indisponível"; }
+    else if (!d.modelo_baixado) { s.className = "saude falha"; s.textContent = `Modelo ${d.modelo} não baixado`; }
+    else { s.className = "saude ok"; s.textContent = `Modelo pronto (${d.modelo})`; }
+  } catch { s.className = "saude falha"; s.textContent = "Servidor indisponível"; }
+}
+
+// ---------------------------------------------------------------- envio
+function travar(travado) {
+  $("enviar").disabled = travado;
+  $("pergunta").disabled = travado;
+  document.querySelectorAll(".exemplo").forEach((b) => (b.disabled = travado));
+  $("enviar").textContent = travado ? "Consultando…" : "Perguntar";
+  $("resultado").setAttribute("aria-busy", String(travado));
+}
+
+function mostrarEspera() {  // 5B
+  const segundos = el("span", { texto: "0" });
+  const cartao = el("div", { classe: "cartao espera" },
+    el("div", { style: "font-weight:700;font-size:1.125rem" }, "Consultando… ", segundos, " s"),
+    el("p", { classe: "apagado", style: "margin:4px 0 0" },
+      "O modelo escolhe os aeródromos, o sistema busca o METAR e decide o veredito; depois o verificador confere a explicação. Na CPU leva de 15 a 40 s."));
+  limpar($("resultado")); $("resultado").append(cartao);
+  const inicio = Date.now();
+  return setInterval(() => { segundos.textContent = String(Math.floor((Date.now() - inicio) / 1000)); }, 1000);
+}
+
+function mostrarErro(mensagem) {  // REQ-I-14: não parece veredito
+  limpar($("resultado"));
+  $("resultado").append(el("div", { classe: "cartao erro", role: "alert" },
+    el("strong", { texto: "Não foi possível consultar. " }), mensagem));
+  $("painel-traco").hidden = true;
+}
+
+async function perguntar(texto) {
+  travar(true);
+  const relogio = mostrarEspera();
+  const controle = new AbortController();
+  const limite = setTimeout(() => controle.abort(), TEMPO_LIMITE_MS);
+  try {
+    const r = await fetch("/api/perguntar", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pergunta: texto }), signal: controle.signal,
+    });
+    if (!r.ok) throw new Error(r.status === 422 ? "pergunta em formato inválido." : `o servidor respondeu ${r.status}.`);
+    mostrarResultado(await r.json(), null);
+  } catch (e) {
+    mostrarErro(e.name === "AbortError" ? "o tempo de espera (330 s) acabou." : (e.message || "falha de rede."));
+  } finally {
+    clearTimeout(limite); clearInterval(relogio); travar(false);
+  }
+}
+
+// ---------------------------------------------------------------- resultado
+function mostrarResultado(resp, gravadaEm) {
+  if (!resp || !VEREDITOS.includes(resp.veredito)) { mostrarErro("resposta sem veredito válido."); return; }
+  const area = $("resultado");
+  limpar(area);
+  area.append(cartaoVeredito(resp, gravadaEm), cartaoAerodromos(resp.avaliacoes || []), cartaoExplicacao(resp));
+  tracoAtual = { id: resp.id_traco, dados: null };
+  prepararTraco();
+  if (resp.bloqueio) preencherTextoBloqueado(resp);
+}
+
+function cartaoVeredito(resp, gravadaEm) {  // 1C
+  const v = resp.veredito;
+  const corpo = el("div", { classe: "veredito-corpo" });
+  if (gravadaEm) corpo.append(el("div", { classe: "etiqueta" }, `Execução gravada em ${fmtData(gravadaEm)}`));
+  const avs = resp.avaliacoes || [];
+  if (v !== "RECUSA" && avs.length === 1) {
+    const a = avs[0];
+    corpo.append(el("div", { classe: "metricas" },
+      el("div", {}, el("div", { classe: "metrica-rotulo", texto: "Teto" }),
+        el("span", { classe: "metrica-valor", texto: fmtTeto(a.teto_ft) }), el("span", { classe: "apagado", texto: " / mín. 1500 ft" })),
+      el("div", {}, el("div", { classe: "metrica-rotulo", texto: "Visibilidade" }),
+        el("span", { classe: "metrica-valor", texto: fmtVis(a.vis_m) }), el("span", { classe: "apagado", texto: " / mín. 5000 m" }))));
+  }
+  corpo.append(el("div", { texto: resp.motivo || "" }));
+  corpo.append(el("div", { classe: "apagado pequeno", style: "margin-top:4px" },
+    `Veredito calculado em código a partir do METAR · respondido em ${Math.round((resp.duracao_ms || 0) / 1000)} s`));
+  return el("div", { classe: "cartao veredito" },
+    el("div", { classe: "selo-grande v-" + v }, icone(v), v), corpo);
+}
+
+function cartaoAerodromos(avs) {  // 2B — defesa contra H7/H8 (só transparência)
+  const c = el("section", { classe: "cartao", "aria-label": "Aeródromos consultados" },
+    el("h2", {}, "Aeródromos consultados ", el("span", { classe: "apagado pequeno", style: "font-weight:400",
+      texto: "— confira se é o que você pediu" })));
+  if (!avs.length) { c.append(el("p", { classe: "apagado", texto: "Nenhum aeródromo foi consultado." })); return c; }
+  for (const a of avs) {
+    const v = VEREDITOS.includes(a.veredito) ? a.veredito : "RECUSA";
+    const card = el("div", { classe: "aerodromo b-" + v },
+      el("div", { classe: "aerodromo-nome" }, a.nome_estacao || "Estação sem nome na base ",
+        el("span", { classe: "mono apagado", texto: " " + (a.icao || "") })),
+      el("div", { style: "margin-top:4px" }, seloPequeno(v),
+        v === "RECUSA" ? el("span", { texto: "  " + (a.motivo || "") })
+                       : el("span", { texto: `  ${a.teto_ft === null || a.teto_ft === undefined ? "sem teto" : "teto " + a.teto_ft + " ft"} · visibilidade ${fmtVis(a.vis_m)}` })));
+    if (a.metar_bruto) card.append(el("div", { classe: "metar", texto: a.metar_bruto }));
+    c.append(card);
+  }
+  return c;
+}
+
+function cartaoExplicacao(resp) {  // 3B — antes × depois quando há bloqueio
+  const c = el("section", { classe: "cartao", "aria-label": "Explicação" });
+  if (resp.bloqueio) {
+    c.append(el("div", { classe: "alerta", role: "note" },
+      el("strong", { texto: "O verificador barrou a explicação do modelo" }),
+      ` — contradizia o veredito ou citava dado não consultado (regra `, el("span", { classe: "mono", texto: resp.bloqueio.regra || "" }), ")."));
+    const antes = el("div", { id: "texto-bloqueado", classe: "cartao", style: "margin:0 0 8px" },
+      el("div", { classe: "apagado pequeno", texto: "O modelo escreveu (descartado)" }),
+      el("div", { classe: "descartado", texto: resp.bloqueio.trecho ? `… ${resp.bloqueio.trecho} …` : "(texto vazio)" }));
+    c.append(antes);
+  }
+  const origem = resp.origem_explicacao === "modelo" ? "Explicação do modelo" : "Texto gerado pelo sistema";
+  c.append(el("div", { classe: "apagado pequeno", texto: origem }), el("div", { classe: "explicacao", texto: resp.explicacao || "" }));
+  return c;
+}
+
+// O texto completo que o modelo escreveu está no traço (último passo "modelo" com texto) — escolha 3B.
+async function preencherTextoBloqueado(resp) {
+  const dados = await carregarTraco();
+  if (!dados) return;
+  const passos = (dados.passos || []).filter((p) => p.tipo === "modelo" && p.resposta && p.resposta.content);
+  if (!passos.length) return;
+  const texto = passos[passos.length - 1].resposta.content;
+  const alvo = document.querySelector("#texto-bloqueado .descartado");
+  if (!alvo) return;
+  limpar(alvo);
+  const trecho = resp.bloqueio.trecho || "";
+  const i = trecho ? texto.indexOf(trecho) : -1;
+  if (i < 0) { alvo.textContent = texto; return; }
+  alvo.append(texto.slice(0, i), el("mark", { texto: trecho }), texto.slice(i + trecho.length));
+}
+
+// ---------------------------------------------------------------- traço (6B)
+async function carregarTraco() {
+  if (!tracoAtual) return null;
+  if (tracoAtual.dados) return tracoAtual.dados;
+  try {
+    const r = await fetch(`/api/traco/${encodeURIComponent(tracoAtual.id)}`);
+    if (!r.ok) return null;
+    tracoAtual.dados = await r.json();
+    return tracoAtual.dados;
+  } catch { return null; }
+}
+
+function prepararTraco() {
+  const painel = $("painel-traco");
+  painel.hidden = false; painel.open = false;
+  limpar($("traco-conteudo")); $("traco-conteudo").append(el("p", { classe: "apagado", texto: "Abrindo o traço…" }));
+}
+
+function resumoPasso(p) {
+  switch (p.tipo) {
+    case "prefiltro": return p.passou ? "passou" : `bloqueou: ${p.regra}`;
+    case "modelo": {
+      const r = p.resposta || {};
+      if (r.tool_calls && r.tool_calls.length) return "pediu " + r.tool_calls.map((t) => {
+        const f = t.function || {}; const a = f.arguments || {};
+        return `${f.name}(${typeof a === "object" ? (a.icao || "") : a})`;
+      }).join(", ");
+      return "respondeu com texto";
+    }
+    case "ferramenta": {
+      const icao = p.argumentos && typeof p.argumentos === "object" ? p.argumentos.icao : "";
+      return `${p.nome}(${icao || ""}) → ${(p.resultado && p.resultado.status) || (p.janela && p.janela.erro) || "?"}`;
+    }
+    case "harness": return `${p.icao}: ${p.veredito}${p.codigo_recusa ? " (" + p.codigo_recusa + ")" : ""}`;
+    case "verificador": return p.passou === true ? "passou" : p.passou === false ? `bloqueou: ${p.regra}` : "explicação descartada (recusa)";
+    case "erro": return `${p.regra}: ${p.mensagem || ""}`;
+    default: return p.tipo;
+  }
+}
+
+async function abrirTraco() {
+  const alvo = $("traco-conteudo");
+  const dados = await carregarTraco();
+  limpar(alvo);
+  if (!dados) { alvo.append(el("p", { classe: "apagado", texto: "Traço indisponível." })); return; }
+  alvo.append(el("p", { classe: "apagado pequeno", style: "margin:8px 0 0",
+    texto: `Traço ${dados.id} · ${fmtData(dados.inicio)} · modelo ${dados.modelo} · prompt ${dados.versao_prompt} · ${Math.round((dados.duracao_ms || 0) / 1000)} s` }));
+  const corpo = el("tbody");
+  for (const p of dados.passos || []) {
+    const tokens = p.tipo === "modelo" ? `${p.prompt_eval_count ?? "?"} + ${p.eval_count ?? "?"}` : "";
+    const detalhe = el("details", {}, el("summary", { texto: resumoPasso(p) }),
+      el("pre", { texto: JSON.stringify(p, null, 2) }));
+    const alerta = p.tipo === "erro" || p.passou === false;
+    corpo.append(el("tr", alerta ? { classe: "linha-alerta" } : {},
+      el("td", { texto: `${((p.t_ms || 0) / 1000).toFixed(1)} s` }), el("td", { texto: p.tipo }),
+      el("td", {}, detalhe), el("td", { texto: tokens })));
+  }
+  alvo.append(el("div", { classe: "tabela-wrap" }, el("table", {},
+    el("thead", {}, el("tr", {}, el("th", { texto: "t" }), el("th", { texto: "Passo" }),
+      el("th", { texto: "Resultado (clique para ver o conteúdo)" }), el("th", { texto: "Tokens (entrada + saída)" }))),
+    corpo)));
+}
+
+// ---------------------------------------------------------------- execuções gravadas (REQ-I-13)
+async function carregarDemo() {
+  const lista = $("lista-demo");
+  try {
+    const itens = await (await fetch("/api/demo")).json();
+    limpar(lista);
+    if (!itens.length) { lista.append(el("li", { classe: "apagado pequeno", texto: "Nenhuma execução gravada." })); return; }
+    for (const it of itens) {
+      const b = el("button", { type: "button", classe: "exemplo" },
+        VEREDITOS.includes(it.veredito) ? seloPequeno(it.veredito) : "", ` ${it.pergunta} `,
+        el("span", { classe: "apagado pequeno", texto: `— gravada em ${fmtData(it.inicio)}` }));
+      b.addEventListener("click", () => abrirGravada(it.id, it.inicio));
+      lista.append(el("li", {}, b));
+    }
+  } catch { limpar(lista); lista.append(el("li", { classe: "apagado pequeno", texto: "Não foi possível listar." })); }
+}
+
+async function abrirGravada(id, inicio) {
+  try {
+    const r = await fetch(`/api/traco/${encodeURIComponent(id)}`);
+    if (!r.ok) throw new Error();
+    const dados = await r.json();
+    mostrarResultado(dados.resposta, inicio);
+    tracoAtual.dados = dados;
+    if (dados.resposta && dados.resposta.bloqueio) preencherTextoBloqueado(dados.resposta);
+    $("resultado").scrollIntoView({ block: "start" });
+  } catch { mostrarErro("a execução gravada não abriu."); }
+}
+
+// ---------------------------------------------------------------- ligações
+$("form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const texto = $("pergunta").value.trim();
+  if (!texto) { $("pergunta").focus(); return; }
+  perguntar(texto);
+});
+$("pergunta").addEventListener("input", () => { $("contador").textContent = `${$("pergunta").value.length}/500 caracteres`; });
+document.querySelectorAll(".exemplo[data-pergunta]").forEach((b) => b.addEventListener("click", () => {
+  $("pergunta").value = b.dataset.pergunta;
+  $("contador").textContent = `${b.dataset.pergunta.length}/500 caracteres`;
+  perguntar(b.dataset.pergunta);
+}));
+$("painel-traco").addEventListener("toggle", () => { if ($("painel-traco").open) abrirTraco(); });
+
+verificarSaude();
+carregarDemo();
+</script>
+</body>
+</html>

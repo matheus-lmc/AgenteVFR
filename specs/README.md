@@ -33,7 +33,7 @@ antes de existir um requisito aprovado que o justifique e um teste que o verifiq
 |---|---|---|---|
 | 01 | Harness (decodificação, regra VMC/IMC, recusas, verificador) | `01-harness/` | concluído (155 testes verdes) |
 | 02 | Ferramentas (API aviationweather + cache) | `02-ferramentas/` | concluído (61 testes verdes + 1 ao vivo) |
-| 03 | Agente (loop, prompt, traço) | `03-agente/` | — |
+| 03 | Agente (loop, prompt, traço) | `03-agente/` | requisitos aprovados; design em andamento |
 | 04 | Interface + Docker | `04-interface/` | — |
 | 05 | Janela VFR pelo TAF (etapa 4b) | `05-janela-taf/` | — |
 

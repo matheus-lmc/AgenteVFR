@@ -1,0 +1,32 @@
+# AgenteVFR — Ollama roda neste Compose (só CPU no Mac; ver CLAUDE.md, seção Stack).
+# O serviço "app" entra na Etapa 4.
+
+services:
+  ollama:
+    image: ollama/ollama:0.40.11
+    ports:
+      - "127.0.0.1:11434:11434"   # só no host local, para testes fora do contêiner
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: 30m      # mantém o modelo carregado entre perguntas da demo
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  # Baixa os modelos uma vez (ficam no volume ollama_data). Rodar: docker compose run --rm ollama-pull
+  ollama-pull:
+    image: ollama/ollama:0.40.11
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["sh", "-c", "ollama pull llama3.1:8b && ollama pull llama3.2:3b"]
+    restart: "no"
+    profiles: ["setup"]
+
+volumes:
+  ollama_data:

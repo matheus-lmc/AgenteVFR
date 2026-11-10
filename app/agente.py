@@ -130,10 +130,12 @@ class Agente:
 
     def _responder(self, pergunta: str, traco: Traco, t0: float) -> RespostaAgente:
         avaliacoes: dict[str, Resumo] = {}
+        nomes: dict[str, str | None] = {}  # nome da estação por ICAO (REQ-A-15); não entra no veredito
 
         def resposta(veredito, motivo, explicacao, origem, bloqueio=None) -> RespostaAgente:
             return RespostaAgente(id_traco=traco.id, veredito=veredito, motivo=motivo,
-                                  avaliacoes=[r.para_dict() for r in avaliacoes.values()],
+                                  avaliacoes=[{**r.para_dict(), "nome_estacao": nomes.get(icao)}
+                                              for icao, r in avaliacoes.items()],
                                   explicacao=explicacao, origem_explicacao=origem, bloqueio=bloqueio,
                                   aviso=prompts.AVISO, duracao_ms=_ms_desde(t0))
 
@@ -179,7 +181,7 @@ class Agente:
                         return recusa(MOTIVOS_AGENTE["limite_iteracoes"])
                     chamadas += 1
                     nome, argumentos = _ler_chamada(pedida)
-                    janela = self._executar(nome, argumentos, traco, avaliacoes)
+                    janela = self._executar(nome, argumentos, traco, avaliacoes, nomes)
                     mensagens.append({"role": "tool", "tool_name": nome,
                                       "content": json.dumps(janela, ensure_ascii=False)})
                 continue
@@ -225,7 +227,8 @@ class Agente:
 
     # ------------------------------------------------------------------ ferramentas (design, seção 6.2)
 
-    def _executar(self, nome, argumentos, traco: Traco, avaliacoes: dict[str, Resumo]) -> dict:
+    def _executar(self, nome, argumentos, traco: Traco, avaliacoes: dict[str, Resumo],
+                  nomes: dict[str, str | None]) -> dict:
         def registrar(janela: dict, resultado=None) -> dict:
             traco.passo("ferramenta", nome=nome, argumentos=argumentos,
                         resultado=resultado.para_dict() if resultado else None, janela=janela)
@@ -245,11 +248,13 @@ class Agente:
         r = self._buscar_metar(icao)
         if r.status == "ok":
             avaliado = harness.avaliar_metar(r.texto_bruto, r.icao, self._relogio())
-            janela = avaliado.resumo.para_dict()
+            nome_estacao = _nome_estacao(r)
+            janela = {**avaliado.resumo.para_dict(), "nome_estacao": nome_estacao}  # REQ-A-03 revisado
             avaliacoes[r.icao] = avaliado.resumo
+            nomes[r.icao] = nome_estacao
             registrar(janela, r)
             traco.passo("harness", icao=r.icao, veredito=avaliado.veredito.value,
-                        codigo_recusa=avaliado.codigo_recusa, resumo=janela)
+                        codigo_recusa=avaliado.codigo_recusa, nome_estacao=nome_estacao, resumo=janela)
             return janela
         if r.status == "icao_invalido":  # erro de digitação do modelo: não conta (REQ-A-07)
             return registrar({"icao": r.icao, "status": r.status, "veredito": "RECUSA",
@@ -257,7 +262,18 @@ class Agente:
         motivo = MOTIVOS_BUSCA.get(r.status, "Falha na busca do METAR.")
         avaliacoes[r.icao] = Resumo(icao=r.icao, tipo=None, horario_utc=None, idade_min=None, vis_m=None,
                                     teto_ft=None, camadas=[], veredito="RECUSA", motivo=motivo, metar_bruto="")
+        nomes[r.icao] = None
         return registrar({"icao": r.icao, "status": r.status, "veredito": "RECUSA", "motivo": motivo}, r)
+
+
+def _nome_estacao(resultado) -> str | None:
+    """Nome da estação no JSON da API (REQ-A-15). Só identifica; nunca decide nada."""
+    dados = resultado.resposta_api
+    primeiro = dados[0] if isinstance(dados, list) and dados else None
+    nome = primeiro.get("name") if isinstance(primeiro, dict) else None
+    if not isinstance(nome, str) or not nome.strip():
+        return None
+    return nome.strip()
 
 
 def _ler_chamada(pedida) -> tuple[object, object]:

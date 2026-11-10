@@ -39,9 +39,10 @@ METAR_SBSP_VMC = metar("SBSP", "15010KT 9999 FEW030 18/17 Q1020")        # VMC
 TAF_SBGR = "TAF SBGR 101200Z 1012/1118 08005KT 9999 BKN025"
 
 
-def busca(icao: str, status: str = "ok", texto: str | None = None, tipo: str = "metar") -> ResultadoBusca:
+def busca(icao: str, status: str = "ok", texto: str | None = None, tipo: str = "metar",
+          nome: str | None = None) -> ResultadoBusca:
     resposta = [{"rawOb" if tipo == "metar" else "rawTAF": texto, "fltCat": "MVFR",
-                 "receiptTime": "2026-11-10T13:56:00Z"}] if texto else None
+                 "receiptTime": "2026-11-10T13:56:00Z", **({"name": nome} if nome else {})}] if texto else None
     return ResultadoBusca(icao=icao, tipo=tipo, status=status, texto_bruto=texto, resposta_api=resposta,
                           url=f"https://aviationweather.gov/api/data/{tipo}?ids={icao}&format=json",
                           http_status=200 if texto else None, de_cache=False, tentativas=1,
@@ -75,9 +76,9 @@ class BuscasFalsas:
 
 
 PADRAO_METARS = {
-    "SBGR": busca("SBGR", texto=METAR_SBGR),
-    "SBKP": busca("SBKP", texto=METAR_SBKP),
-    "SBSP": busca("SBSP", texto=METAR_SBSP_IMC),
+    "SBGR": busca("SBGR", texto=METAR_SBGR, nome="Sao Paulo Intl, PR, BR"),
+    "SBKP": busca("SBKP", texto=METAR_SBKP, nome="Campinas/Viracopos Arpt, SP, BR"),
+    "SBSP": busca("SBSP", texto=METAR_SBSP_IMC, nome="Sao Paulo/Congonhas, SP, BR"),
     "KMIA": busca("KMIA", "fora_do_escopo"),
 }
 
@@ -214,7 +215,8 @@ def test_req_a03_resultado_do_metar_e_o_resumo_do_harness(rodar):
     _, modelo, _, _ = rodar(PERGUNTA, ferramentas_(chamada("buscar_metar", icao="SBGR")), texto(COERENTE_SBGR))
     tool = mensagens_tool(modelo, 1)[0]
     assert tool["tool_name"] == "buscar_metar"
-    esperado = harness.avaliar_metar(METAR_SBGR, "SBGR", AGORA).resumo.para_dict()
+    esperado = {**harness.avaliar_metar(METAR_SBGR, "SBGR", AGORA).resumo.para_dict(),
+                "nome_estacao": "Sao Paulo Intl, PR, BR"}                       # REQ-A-03 revisado
     assert json.loads(tool["content"]) == esperado
 
 
@@ -428,7 +430,8 @@ def test_req_a10_resposta(rodar):
     assert d["veredito"] == "VMC"
     assert d["id_traco"] == traco["id"]
     assert isinstance(d["duracao_ms"], int)
-    assert d["avaliacoes"][0] == harness.avaliar_metar(METAR_SBGR, "SBGR", AGORA).resumo.para_dict()
+    assert d["avaliacoes"][0] == {**harness.avaliar_metar(METAR_SBGR, "SBGR", AGORA).resumo.para_dict(),
+                                  "nome_estacao": "Sao Paulo Intl, PR, BR"}   # REQ-A-10 revisado
 
 
 def test_req_a10_recusa_cita_briefing_oficial(rodar):
@@ -520,6 +523,7 @@ def test_req_a13_passos_do_loop(rodar):
     assert ferramenta["resultado"]["resposta_api"][0]["fltCat"] == "MVFR"   # bruto fica no traço
     assert "fltCat" not in json.dumps(ferramenta["janela"])                   # ...mas não na janela
     assert passos(traco, "harness")[0]["veredito"] == "VMC"
+    assert passos(traco, "harness")[0]["nome_estacao"] == "Sao Paulo Intl, PR, BR"
     assert traco["resposta"] == r.para_dict()
 
 
@@ -536,3 +540,56 @@ def test_req_a14_ollama_real(tmp_path):
     r = Agente(pasta_traces=tmp_path).perguntar(PERGUNTA)
     assert r.veredito in {"VMC", "IMC", "RECUSA"}
     assert "SBGR" in [a["icao"] for a in r.avaliacoes], r
+
+
+# --------------------------------------------------------------------------- REQ-A-15 nome da estação (H7)
+
+def _com_resposta(icao, texto, resposta_api):
+    b = busca(icao, texto=texto)
+    return ResultadoBusca(**{**b.para_dict(), "resposta_api": resposta_api})
+
+
+@pytest.mark.parametrize("resposta_api", [
+    [{"rawOb": METAR_SBGR}],
+    [{"rawOb": METAR_SBGR, "name": ""}],
+    [{"rawOb": METAR_SBGR, "name": "   "}],
+    [{"rawOb": METAR_SBGR, "name": 123}],
+    ["nao e objeto"],
+    [],
+    {"rawOb": METAR_SBGR},
+])
+def test_req_a15_nome_ausente_vira_null(rodar, resposta_api):
+    metars = dict(PADRAO_METARS, SBGR=_com_resposta("SBGR", METAR_SBGR, resposta_api))
+    r, modelo, _, _ = rodar(PERGUNTA, ferramentas_(chamada("buscar_metar", icao="SBGR")), texto(COERENTE_SBGR),
+                            metars=metars)
+    assert r.avaliacoes[0]["nome_estacao"] is None
+    assert json.loads(mensagens_tool(modelo, 1)[0]["content"])["nome_estacao"] is None
+
+
+def test_req_a15_nome_com_espacos_e_aparado(rodar):
+    metars = dict(PADRAO_METARS, SBGR=busca("SBGR", texto=METAR_SBGR, nome="  Sao Paulo Intl, PR, BR "))
+    r, _, _, _ = rodar(PERGUNTA, ferramentas_(chamada("buscar_metar", icao="SBGR")), texto(COERENTE_SBGR),
+                       metars=metars)
+    assert r.avaliacoes[0]["nome_estacao"] == "Sao Paulo Intl, PR, BR"
+
+
+def test_req_a15_nome_nao_muda_o_veredito(rodar):
+    metars = dict(PADRAO_METARS, SBSP=busca("SBSP", texto=METAR_SBSP_IMC, nome="Rio de Janeiro/Dumont Arpt, RJ, BR"))
+    r, _, _, _ = rodar("Congonhas?", ferramentas_(chamada("buscar_metar", icao="SBSP")),
+                       texto("Em SBSP as condições são IMC."), metars=metars)
+    assert r.veredito == "IMC"
+    assert r.avaliacoes[0]["veredito"] == "IMC"
+
+
+def test_req_a15_busca_que_falhou_tem_nome_null(rodar):
+    r, _, _, _ = rodar("E em SBXX?", ferramentas_(chamada("buscar_metar", icao="SBXX")), texto("Sem dado."))
+    assert r.avaliacoes[0]["nome_estacao"] is None
+
+
+def test_req_a15_modelo_corrige_estacao_errada(rodar):
+    """Roteiro do caso real: pede SBKP, vê 'Campinas', corrige para SBGR. As duas avaliações aparecem."""
+    r, modelo, _, _ = rodar(PERGUNTA, ferramentas_(chamada("buscar_metar", icao="SBKP")),
+                            ferramentas_(chamada("buscar_metar", icao="SBGR")), texto("Condições VMC em SBGR."))
+    assert "Campinas" in json.loads(mensagens_tool(modelo, 1)[0]["content"])["nome_estacao"]
+    assert [(a["icao"], a["nome_estacao"]) for a in r.avaliacoes] == [
+        ("SBKP", "Campinas/Viracopos Arpt, SP, BR"), ("SBGR", "Sao Paulo Intl, PR, BR")]

@@ -6,9 +6,16 @@ from app import prompts
 
 
 def test_req_a12_versao_e_prompt_atual():
-    assert prompts.VERSAO_PROMPT == "v1"
-    assert prompts.PROMPT_SISTEMA is prompts.PROMPT_SISTEMA_V1
+    assert prompts.VERSAO_PROMPT == "v2"                                 # REQ-A-12 revisado
+    assert prompts.PROMPT_SISTEMA is prompts.PROMPT_SISTEMA_V2
     assert len(prompts.PROMPT_SISTEMA) > 200
+    assert len(prompts.PROMPT_SISTEMA_V1) > 200                          # v1 preservado para comparação
+
+
+def test_req_a12_v2_pede_para_conferir_a_estacao():
+    assert "nome_estacao" in prompts.PROMPT_SISTEMA_V2
+    assert "nome_estacao" not in prompts.PROMPT_SISTEMA_V1
+    assert prompts.PROMPT_SISTEMA_V2.startswith(prompts.PROMPT_SISTEMA_V1.split("Como trabalhar:")[0])
 
 
 def test_req_a12_instrucoes_obrigatorias():
@@ -19,7 +26,7 @@ def test_req_a12_instrucoes_obrigatorias():
 
 
 def test_req_a12_sem_tabela_de_icao():
-    textos = [prompts.PROMPT_SISTEMA, prompts.LEMBRETE_FERRAMENTA]
+    textos = [prompts.PROMPT_SISTEMA_V1, prompts.PROMPT_SISTEMA_V2, prompts.LEMBRETE_FERRAMENTA]
     textos += [f["function"]["description"] for f in prompts.FERRAMENTAS]
     textos += [f["function"]["parameters"]["properties"]["icao"]["description"] for f in prompts.FERRAMENTAS]
     for texto in textos:

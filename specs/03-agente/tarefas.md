@@ -30,6 +30,11 @@ Cada tarefa só é marcada quando os testes citados passam.
       10/11/2026, com `num_thread=4` no código (REQ-A-11 revisado): `llama3.1:8b` respondeu em 16 s, mas
       `test_req_a14_ollama_real` **falha** de forma reprodutível — o modelo avalia `SBKP` (Campinas) para
       "Guarulhos" (perigo H7). O teste fica como está até a mitigação do H7 entrar.
+      **Revisão 1 (nome da estação + prompt v2), 10/11/2026:** implementada, 289 testes verdes. Com o Ollama real
+      o teste **continua falhando**: o modelo recebeu `"nome_estacao": "Campinas/Viracopos Arpt, SP, BR"` e
+      respondeu "Sim, é possível ir VFR em Guarulhos", citando o METAR de SBKP no mesmo texto (20 s, traço em
+      `traces/`). Pela decisão D9, H7 fica **não mitigado pelo modelo** — só pela transparência: a resposta traz
+      `SBKP — Campinas/Viracopos` e a interface deve mostrar isso em destaque. Vai para STPA e AI Assurance.
 - [ ] T12. Rodar à mão os 3 exemplos da demo (VMC, IMC/recusa, Miami) e guardar os traços
 - [ ] T13. Matriz de rastreabilidade e commit
 

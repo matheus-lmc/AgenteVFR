@@ -35,7 +35,7 @@ antes de existir um requisito aprovado que o justifique e um teste que o verifiq
 | 02 | Ferramentas (API aviationweather + cache) | `02-ferramentas/` | concluído (61 testes verdes + 1 ao vivo) |
 | 03 | Agente (loop, prompt, traço) | `03-agente/` | concluído (73 testes verdes; teste com Ollama real falha por H7, registrado) |
 | 04 | Interface + Docker | `04-interface/` | concluído (36 testes verdes; Compose medido: 15,2 s por pergunta) |
-| 05 | Janela VFR pelo TAF (etapa 4b) | `05-janela-taf/` | requisitos aprovados; design em andamento |
+| 05 | Janela VFR pelo TAF (etapa 4b) | `05-janela-taf/` | requisitos e design aprovados; testes em andamento |
 
 ## Matriz de rastreabilidade
 

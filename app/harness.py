@@ -148,14 +148,54 @@ def avaliar_metar(metar_bruto: str, icao_solicitado: str, agora: datetime) -> Re
     if i < len(tokens) and tokens[i] == "AUTO":
         i += 1
 
-    # Corpo (design 4.3)
-    cavok = sem_nuvem = False
-    vis: int | None = None
-    vis_lida = False
-    camadas: list[str] = []
+    # Corpo (design 4.3): só a observação atual, até RMK/BECMG/TEMPO/NOSIG (REQ-H-07)
+    corpo = []
     for t in tokens[i:]:
         if t in _FIM_DA_OBSERVACAO:
             break
+        corpo.append(t)
+    cond = ler_condicoes(corpo)
+    cavok, sem_nuvem, vis, camadas = cond.cavok, cond.sem_nuvem, cond.vis_m, cond.camadas
+    campos["vis_m"] = vis
+    campos["camadas"] = camadas
+
+    if vis is None:
+        return recusa("visibilidade_indisponivel")
+
+    teto, ilegivel = teto_das_camadas(camadas)
+    if ilegivel:
+        return recusa("teto_indisponivel")  # decisão D2
+    if not camadas and not cavok and not sem_nuvem:
+        return recusa("nuvens_indisponiveis")  # decisão D3
+    campos["teto_ft"] = teto
+
+    # Regra (REQ-H-10)
+    vmc = eh_vmc(teto, vis)
+    veredito = Veredito.VMC if vmc else Veredito.IMC
+    resumo = Resumo(
+        icao=icao, tipo=campos["tipo"], horario_utc=campos["horario_utc"], idade_min=idade_min,
+        vis_m=vis, teto_ft=teto, camadas=camadas, veredito=veredito.value,
+        motivo=_motivo(vmc, teto, vis), metar_bruto=bruto,
+    )
+    return Resultado(veredito, None, resumo)
+
+
+@dataclass(frozen=True)
+class Condicoes:
+    """Visibilidade e nuvens lidas de um trecho de METAR ou TAF (usado também pelo harness do TAF)."""
+
+    vis_m: int | None      # None = não informada (ou "////")
+    cavok: bool
+    sem_nuvem: bool        # NSC, NCD, SKC ou CLR
+    camadas: list[str]     # grupos de nuvem e VV, como no boletim
+
+
+def ler_condicoes(tokens: list[str]) -> Condicoes:
+    """Lê visibilidade predominante e nuvens (REQ-H-08, REQ-H-09); ignora o resto. CAVOK → 10000 m."""
+    cavok = sem_nuvem = vis_lida = False
+    vis: int | None = None
+    camadas: list[str] = []
+    for t in tokens:
         if t == "CAVOK":
             cavok = True
         elif not vis_lida and (mv := _RE_VIS.match(t)):
@@ -170,35 +210,22 @@ def avaliar_metar(metar_bruto: str, icao_solicitado: str, agora: datetime) -> Re
             camadas.append(t)
         elif t in _SEM_NUVEM:
             sem_nuvem = True
-
     if cavok:
         vis = 10000
-    campos["vis_m"] = vis
-    campos["camadas"] = camadas
+    return Condicoes(vis, cavok, sem_nuvem, camadas)
 
-    if vis is None:
-        return recusa("visibilidade_indisponivel")
 
+def teto_das_camadas(camadas: list[str]) -> tuple[int | None, bool]:
+    """(teto em pés ou None, alguma camada ilegível?) — BKN/OVC/VV contam como teto (REQ-H-09)."""
     partes = [_partes_camada(c) for c in camadas]
-    for cobertura, altura in partes:
-        if cobertura == "///" or (cobertura in _COBERTURAS_TETO and altura is None):
-            return recusa("teto_indisponivel")  # decisão D2
-    if not camadas and not cavok and not sem_nuvem:
-        return recusa("nuvens_indisponiveis")  # decisão D3
+    ilegivel = any(cob == "///" or (cob in _COBERTURAS_TETO and alt is None) for cob, alt in partes)
+    teto = min((alt * 100 for cob, alt in partes if cob in _COBERTURAS_TETO and alt is not None), default=None)
+    return teto, ilegivel
 
-    teto = min((altura * 100 for cobertura, altura in partes
-                if cobertura in _COBERTURAS_TETO), default=None)
-    campos["teto_ft"] = teto
 
-    # Regra (REQ-H-10)
-    vmc = (teto is None or teto >= TETO_MIN_FT) and vis >= VIS_MIN_M
-    veredito = Veredito.VMC if vmc else Veredito.IMC
-    resumo = Resumo(
-        icao=icao, tipo=campos["tipo"], horario_utc=campos["horario_utc"], idade_min=idade_min,
-        vis_m=vis, teto_ft=teto, camadas=camadas, veredito=veredito.value,
-        motivo=_motivo(vmc, teto, vis), metar_bruto=bruto,
-    )
-    return Resultado(veredito, None, resumo)
+def eh_vmc(teto: int | None, vis: int) -> bool:
+    """A regra de mínimos (REQ-H-10), num lugar só para METAR e TAF."""
+    return (teto is None or teto >= TETO_MIN_FT) and vis >= VIS_MIN_M
 
 
 def _resolver_horario(dia: int, hora: int, minuto: int, agora: datetime) -> datetime | None:
@@ -272,7 +299,8 @@ MOTIVOS_PERGUNTA = {
     "pressao_operacional": "O sistema não autoriza operação contra o veredito; a decisão é do piloto em comando, "
                            "com o briefing oficial.",
     "pedido_ifr": "Planejamento IFR está fora do escopo: o sistema só avalia condições VFR de aeródromo.",
-    "previsao_alem_taf": "Previsão além da validade do TAF (24–30 h) está fora do escopo.",
+    "previsao_alem_taf": "Previsão além da validade do TAF (24–30 h) está fora do escopo. Posso mostrar a "
+                         "melhor janela VFR dentro da validade do TAF (até ~30 h).",  # REQ-J-12
 }
 
 _PADROES_PERGUNTA = {
@@ -319,13 +347,9 @@ _EXPRESSOES = (
 )
 
 
-def verificar_explicacao(explicacao: str, resumo: Resumo) -> Verificacao:
-    if resumo.veredito == Veredito.RECUSA.value:
-        return Verificacao(texto_modelo(resumo), "texto_modelo", False, None, None)
-    if not explicacao.strip():
-        return Verificacao(texto_modelo(resumo), "texto_modelo", True, "explicacao_vazia", None)
-
-    normalizada = _normalizar(explicacao)
+def contradicao(texto: str, veredito: str) -> tuple[str, str] | None:
+    """(regra, trecho) da primeira afirmação que contradiz o veredito VMC/IMC, ou None (REQ-H-14)."""
+    normalizada = _normalizar(texto)
     ocorrencias = []
     for padrao, sinal in _EXPRESSOES:
         for m in padrao.finditer(normalizada):
@@ -336,11 +360,22 @@ def verificar_explicacao(explicacao: str, resumo: Resumo) -> Verificacao:
                 sinal_efetivo = sinal
             ocorrencias.append((m.start(), m.end(), sinal_efetivo))
 
-    contraditorio = +1 if resumo.veredito == Veredito.IMC.value else -1
+    contraditorio = +1 if veredito == Veredito.IMC.value else -1
     regra = "imc_com_afirmacao_favoravel" if contraditorio > 0 else "vmc_com_afirmacao_desfavoravel"
     for inicio, fim, sinal in sorted(ocorrencias):
         if sinal == contraditorio:
-            return Verificacao(texto_modelo(resumo), "texto_modelo", True, regra, explicacao[inicio:fim])
+            return regra, texto[inicio:fim]
+    return None
+
+
+def verificar_explicacao(explicacao: str, resumo: Resumo) -> Verificacao:
+    if resumo.veredito == Veredito.RECUSA.value:
+        return Verificacao(texto_modelo(resumo), "texto_modelo", False, None, None)
+    if not explicacao.strip():
+        return Verificacao(texto_modelo(resumo), "texto_modelo", True, "explicacao_vazia", None)
+    achado = contradicao(explicacao, resumo.veredito)
+    if achado:
+        return Verificacao(texto_modelo(resumo), "texto_modelo", True, *achado)
     return Verificacao(explicacao, "modelo", False, None, None)
 
 

@@ -11,11 +11,11 @@ Cada tarefa só é marcada quando os testes citados passam.
 
 ## Portão 4 — implementação (verde)
 
-- [ ] T5. Refatorar `harness.ler_condicoes` e `harness.contradicao` sem quebrar os 155 testes do harness
-- [ ] T6. `harness_taf.avaliar_taf`, períodos, melhor janela, texto-modelo — J-01 a J-08
-- [ ] T7. Agente: `avaliar_janela`, `janelas`, verificador por horário, prompt v3, pré-filtro — J-09 a J-12
-- [ ] T8. Página: linha do tempo da previsão — J-13
-- [ ] T9. `pytest` todo verde
+- [x] T5. Refatorar `harness.ler_condicoes` e `harness.contradicao` sem quebrar os 155 testes do harness
+- [x] T6. `harness_taf.avaliar_taf`, períodos, melhor janela, texto-modelo — J-01 a J-08
+- [x] T7. Agente: `avaliar_janela`, `janelas`, verificador por horário, prompt v3, pré-filtro — J-09 a J-12
+- [x] T8. Página: linha do tempo da previsão — J-13
+- [x] T9. `pytest` todo verde
 
 ## Portão 5 — fechamento
 

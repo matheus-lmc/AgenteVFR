@@ -91,6 +91,16 @@
   td pre { font-family: var(--mono); font-size: .75rem; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--fundo); padding: 8px; border-radius: 6px; max-height: 360px; overflow: auto; }
   tr.linha-alerta td { background: var(--bloqueio-fundo); color: var(--bloqueio-texto); }
 
+  /* Previsão pelo TAF (REQ-J-13): separada do veredito de agora */
+  .previsao { border-style: dashed; border-color: var(--borda); }
+  .faixa { display: flex; gap: 2px; overflow-x: auto; padding: 4px 2px 8px; margin-top: 8px; }
+  .celula { flex: 0 0 auto; width: 44px; text-align: center; font-size: .75rem; color: var(--texto-apagado); }
+  .celula .barra { height: 30px; border-radius: 4px; color: #fff; display: flex; align-items: center; justify-content: center;
+                   font-weight: 700; font-size: .6875rem; margin-bottom: 2px; }
+  .celula.melhor .barra { outline: 3px solid var(--texto); outline-offset: 1px; }
+  .melhor-janela { font-weight: 700; margin-top: 4px; }
+  .lista-periodos { margin: 8px 0 0; padding-left: 18px; font-size: .875rem; }
+
   #lista-demo { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
   #lista-demo button { width: 100%; }
 
@@ -131,6 +141,7 @@
         <span class="apagado pequeno">Exemplos:</span>
         <button type="button" class="exemplo" data-pergunta="Dá pra ir VFR em Congonhas agora?">Dá pra ir VFR em Congonhas agora?</button>
         <button type="button" class="exemplo" data-pergunta="Posso decolar de Congonhas mesmo assim?">Posso decolar de Congonhas mesmo assim?</button>
+        <button type="button" class="exemplo" data-pergunta="Qual a melhor janela pra voar VFR em Congonhas nas próximas horas?">Qual a melhor janela pra voar VFR em Congonhas nas próximas horas?</button>
         <button type="button" class="exemplo" data-pergunta="Qual o melhor dia pra ir pra Miami nos próximos 5 dias?">Qual o melhor dia pra ir pra Miami nos próximos 5 dias?</button>
       </div>
     </section>
@@ -252,7 +263,9 @@ function mostrarResultado(resp, gravadaEm) {
   if (!resp || !VEREDITOS.includes(resp.veredito)) { mostrarErro("resposta sem veredito válido."); return; }
   const area = $("resultado");
   limpar(area);
-  area.append(cartaoVeredito(resp, gravadaEm), cartaoAerodromos(resp.avaliacoes || []), cartaoExplicacao(resp));
+  area.append(cartaoVeredito(resp, gravadaEm), cartaoAerodromos(resp.avaliacoes || []));
+  if ((resp.janelas || []).length) area.append(cartaoPrevisao(resp.janelas));
+  area.append(cartaoExplicacao(resp));
   tracoAtual = { id: resp.id_traco, dados: null };
   prepararTraco();
   if (resp.bloqueio) preencherTextoBloqueado(resp);
@@ -293,6 +306,47 @@ function cartaoAerodromos(avs) {  // 2B — defesa contra H7/H8 (só transparên
                        : el("span", { texto: `  ${a.teto_ft === null || a.teto_ft === undefined ? "sem teto" : "teto " + a.teto_ft + " ft"} · visibilidade ${fmtVis(a.vis_m)}` })));
     if (a.metar_bruto) card.append(el("div", { classe: "metar", texto: a.metar_bruto }));
     c.append(card);
+  }
+  return c;
+}
+
+// ---------------------------------------------------------------- previsão pelo TAF (REQ-J-13)
+function horaZ(iso) { return iso.slice(11, 13) + "Z"; }
+function horaLocal(iso) { return String((Number(iso.slice(11, 13)) + 21) % 24).padStart(2, "0") + "h"; }  // UTC−3
+function intervalo(ini, fim) { return `${horaZ(ini)}–${horaZ(fim)} (${horaLocal(ini)}–${horaLocal(fim)} em Brasília)`; }
+
+function cartaoPrevisao(janelas) {
+  const c = el("section", { classe: "cartao previsao", "aria-label": "Previsão pelo TAF" },
+    el("h2", {}, "Previsão (TAF) ", el("span", { classe: "apagado pequeno", style: "font-weight:400",
+      texto: "— não é o tempo de agora; horas calculadas em código, pior caso dos grupos do TAF" })));
+  for (const j of janelas) {
+    const bloco = el("div", { style: "margin-top:12px" },
+      el("div", { classe: "aerodromo-nome" }, j.icao || "", j.validade_fim
+        ? el("span", { classe: "apagado pequeno", style: "font-weight:400", texto: ` · válida até ${fmtData(j.validade_fim)}` }) : ""));
+    if (j.veredito !== "JANELA") { bloco.append(el("p", { classe: "apagado", texto: j.motivo || "" })); c.append(bloco); continue; }
+    const m = j.melhor_janela;
+    bloco.append(el("div", { classe: "melhor-janela",
+      texto: m ? `Melhor janela VMC: ${intervalo(m.inicio, m.fim)}, ${m.horas} h` : "Nenhuma hora VMC prevista na validade do TAF." }));
+    const faixa = el("div", { classe: "faixa", role: "list", "aria-label": `Horas previstas para ${j.icao}` });
+    const iniMelhor = m ? Date.parse(m.inicio) : 0, fimMelhor = m ? Date.parse(m.fim) : 0;
+    for (const p of j.periodos || []) {
+      const v = p.veredito === "VMC" ? "VMC" : "IMC";
+      for (let t = Date.parse(p.inicio); t < Date.parse(p.fim); t += 3600000) {
+        const iso = new Date(t).toISOString();
+        const melhor = m && t >= iniMelhor && t < fimMelhor;
+        faixa.append(el("div", { classe: "celula" + (melhor ? " melhor" : ""), role: "listitem",
+          title: `${horaZ(iso)}: ${v} — ${p.motivo}`, "aria-label": `${horaZ(iso)} ${v}${melhor ? ", melhor janela" : ""}` },
+          el("div", { classe: "barra v-" + v, texto: v }), horaZ(iso)));
+      }
+    }
+    bloco.append(faixa);
+    const lista = el("ul", { classe: "lista-periodos" });
+    for (const p of j.periodos || []) {
+      lista.append(el("li", { texto: `${intervalo(p.inicio, p.fim)}: ${p.veredito}` +
+        (p.veredito === "IMC" ? ` — ${p.motivo} (${p.grupo})` : "") }));
+    }
+    bloco.append(lista, el("div", { classe: "metar", texto: j.taf_bruto || "" }));
+    c.append(bloco);
   }
   return c;
 }

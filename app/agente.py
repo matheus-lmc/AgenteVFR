@@ -10,14 +10,16 @@ import json
 import os
 import re
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import httpx
 
-from app import ferramentas, harness, prompts
+from app import ferramentas, harness, harness_taf, prompts
 from app.ferramentas import agora_utc
 from app.harness import Resumo
+from app.harness_taf import ResumoJanela
 from app.traco import Traco
 
 MAX_CHAMADAS_FERRAMENTA = 5     # REQ-A-04
@@ -30,13 +32,25 @@ OLLAMA_TIMEOUT_PADRAO_S = 300.0  # CPU no Docker do Mac é lenta
 SEED = 42
 
 _RE_ICAO_BR = re.compile(r"\bS[BDIJNSW][A-Z]{2}\b")
-_AVISO_TAF = "Informativo: o TAF não entra no veredito."
+# Horário citado numa frase (REQ-J-11): "15Z", "15:30Z", "15 UTC", "15h", "às 15"
+_RE_HORA = [
+    re.compile(r"\b([01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:z|utc)\b"),
+    re.compile(r"\b([01]?\d|2[0-3])h(?:[0-5]\d)?\b"),
+    re.compile(r"\b(?:as|às)\s+([01]?\d|2[0-3])(?::[0-5]\d)?\b"),
+]
+_RE_FRASES = re.compile(r"(?<=[.!?])\s+|\n+")
 
 MOTIVOS_AGENTE = {
     "pergunta_invalida": f"Pergunta vazia ou longa demais (máximo {MAX_CARACTERES_PERGUNTA} caracteres).",
     "erro_modelo": "O modelo de linguagem não respondeu; não foi possível montar o briefing.",
     "limite_iteracoes": f"Limite de {MAX_CHAMADAS_FERRAMENTA} consultas por pergunta atingido sem resposta final.",
     "sem_avaliacao": "Nenhum aeródromo foi consultado; o sistema não responde sem dado.",
+}
+MOTIVOS_BUSCA_TAF = {
+    "sem_dado": "A API não tem TAF disponível para este aeródromo.",
+    "fora_do_escopo": harness.MOTIVOS_RECUSA["fora_do_escopo"],
+    "erro_api": "Falha ao consultar a API meteorológica.",
+    "limite_api": "Limite de consultas da API meteorológica atingido.",
 }
 MOTIVOS_BUSCA = {
     "sem_dado": "A API não tem METAR disponível para este aeródromo.",
@@ -98,6 +112,7 @@ class RespostaAgente:
     bloqueio: dict | None       # {"regra", "trecho"} quando o verificador barrou a explicação
     aviso: str
     duracao_ms: int
+    janelas: list[dict] = field(default_factory=list)  # previsão pelo TAF (REQ-J-09); não muda o veredito
 
     def para_dict(self) -> dict:
         return asdict(self)
@@ -131,13 +146,15 @@ class Agente:
     def _responder(self, pergunta: str, traco: Traco, t0: float) -> RespostaAgente:
         avaliacoes: dict[str, Resumo] = {}
         nomes: dict[str, str | None] = {}  # nome da estação por ICAO (REQ-A-15); não entra no veredito
+        janelas: dict[str, ResumoJanela] = {}  # previsão pelo TAF por ICAO (REQ-J-09)
 
         def resposta(veredito, motivo, explicacao, origem, bloqueio=None) -> RespostaAgente:
             return RespostaAgente(id_traco=traco.id, veredito=veredito, motivo=motivo,
                                   avaliacoes=[{**r.para_dict(), "nome_estacao": nomes.get(icao)}
                                               for icao, r in avaliacoes.items()],
                                   explicacao=explicacao, origem_explicacao=origem, bloqueio=bloqueio,
-                                  aviso=prompts.AVISO, duracao_ms=_ms_desde(t0))
+                                  aviso=prompts.AVISO, duracao_ms=_ms_desde(t0),
+                                  janelas=[j.para_dict() for j in janelas.values()])
 
         def recusa(motivo: str) -> RespostaAgente:
             return resposta("RECUSA", motivo, f"{motivo} Consulte o briefing oficial (REDEMET/AIS).",
@@ -181,7 +198,7 @@ class Agente:
                         return recusa(MOTIVOS_AGENTE["limite_iteracoes"])
                     chamadas += 1
                     nome, argumentos = _ler_chamada(pedida)
-                    janela = self._executar(nome, argumentos, traco, avaliacoes, nomes)
+                    janela = self._executar(nome, argumentos, traco, avaliacoes, nomes, janelas)
                     mensagens.append({"role": "tool", "tool_name": nome,
                                       "content": json.dumps(janela, ensure_ascii=False)})
                 continue
@@ -209,41 +226,58 @@ class Agente:
             explicacao = "\n".join(harness.texto_modelo(r) for r in resumos if r.veredito == "RECUSA")
             return resposta("RECUSA", motivo, explicacao, "texto_modelo")
 
-        # Verificação da explicação (REQ-A-09)
+        # Verificação da explicação (REQ-A-09; com horário, REQ-J-11)
         referencia = next(r for r in resumos if r.veredito == geral)
-        verificacao = harness.verificar_explicacao(texto, referencia)
-        bloqueio = None
-        if verificacao.bloqueada:
-            bloqueio = {"regra": verificacao.regra, "trecho": verificacao.trecho}
+        validas = [j for j in janelas.values() if j.veredito == "JANELA"]
+        if validas:
+            bloqueio = _verificar_com_horario(texto, referencia, validas, self._relogio())
         else:
-            inventados = [c for c in _RE_ICAO_BR.findall(texto) if c not in avaliacoes]
+            verificacao = harness.verificar_explicacao(texto, referencia)
+            bloqueio = {"regra": verificacao.regra, "trecho": verificacao.trecho} if verificacao.bloqueada else None
+        if bloqueio is None:
+            inventados = [c for c in _RE_ICAO_BR.findall(texto) if c not in avaliacoes and c not in janelas]
             if inventados:
                 bloqueio = {"regra": "icao_nao_avaliado", "trecho": inventados[0]}
         traco.passo("verificador", passou=bloqueio is None, **(bloqueio or {"regra": None, "trecho": None}))
         if bloqueio:
-            return resposta(geral, motivo, "\n".join(harness.texto_modelo(r) for r in resumos),
-                            "texto_modelo", bloqueio)
+            textos = [harness.texto_modelo(r) for r in resumos]
+            textos += [harness_taf.texto_modelo_janela(j) for j in janelas.values()]
+            return resposta(geral, motivo, "\n".join(textos), "texto_modelo", bloqueio)
         return resposta(geral, motivo, texto, "modelo")
 
     # ------------------------------------------------------------------ ferramentas (design, seção 6.2)
 
     def _executar(self, nome, argumentos, traco: Traco, avaliacoes: dict[str, Resumo],
-                  nomes: dict[str, str | None]) -> dict:
+                  nomes: dict[str, str | None], janelas: dict[str, ResumoJanela]) -> dict:
         def registrar(janela: dict, resultado=None) -> dict:
             traco.passo("ferramenta", nome=nome, argumentos=argumentos,
                         resultado=resultado.para_dict() if resultado else None, janela=janela)
             return janela
 
-        if nome not in ("buscar_metar", "buscar_taf"):
+        if nome not in ("buscar_metar", "avaliar_janela"):
             return registrar({"erro": f"ferramenta desconhecida: {nome}"})
         icao = argumentos.get("icao") if isinstance(argumentos, dict) else None
         if not isinstance(icao, str):
             return registrar({"erro": "argumento icao (texto) obrigatório"})
 
-        if nome == "buscar_taf":
+        if nome == "avaliar_janela":  # REQ-J-09: só o resumo do harness do TAF vai para a janela
             r = self._buscar_taf(icao)
-            return registrar({"icao": r.icao, "status": r.status, "taf_bruto": r.texto_bruto,
-                              "aviso": _AVISO_TAF}, r)
+            if r.status == "ok":
+                avaliado = harness_taf.avaliar_taf(r.texto_bruto, r.icao, self._relogio())
+                janela = avaliado.resumo.para_dict()
+                janelas[r.icao] = avaliado.resumo
+                registrar(janela, r)
+                traco.passo("harness", icao=r.icao, tipo_dado="taf", veredito=avaliado.veredito,
+                            codigo_recusa=avaliado.codigo_recusa, horas=avaliado.horas, resumo=janela)
+                return janela
+            if r.status == "icao_invalido":
+                return registrar({"icao": r.icao, "status": r.status, "veredito": "RECUSA",
+                                  "motivo": "Use o código ICAO de 4 letras."}, r)
+            motivo = MOTIVOS_BUSCA_TAF.get(r.status, "Falha na busca do TAF.")
+            janelas[r.icao] = ResumoJanela(icao=r.icao, emitido_utc=None, validade_inicio=None, validade_fim=None,
+                                           periodos=[], melhor_janela=None, veredito="RECUSA", motivo=motivo,
+                                           taf_bruto="")
+            return registrar({"icao": r.icao, "status": r.status, "veredito": "RECUSA", "motivo": motivo}, r)
 
         r = self._buscar_metar(icao)
         if r.status == "ok":
@@ -264,6 +298,47 @@ class Agente:
                                     teto_ft=None, camadas=[], veredito="RECUSA", motivo=motivo, metar_bruto="")
         nomes[r.icao] = None
         return registrar({"icao": r.icao, "status": r.status, "veredito": "RECUSA", "motivo": motivo}, r)
+
+
+def _verificar_com_horario(texto: str, referencia: Resumo, janelas: list[ResumoJanela],
+                           agora: datetime) -> dict | None:
+    """REQ-J-11: frase com horário → período daquela hora; frase sem horário → veredito de agora."""
+    if not texto.strip():
+        return {"regra": "explicacao_vazia", "trecho": None}
+    sem_horario = []
+    for frase in _RE_FRASES.split(texto):
+        horas = _horas_citadas(frase)
+        if not horas:
+            sem_horario.append(frase)
+            continue
+        vereditos = []
+        for hora in sorted(horas):
+            momento = _proxima_ocorrencia(hora, agora)
+            previstos = [v for v in (harness_taf.veredito_na_hora(j, momento) for j in janelas) if v]
+            if not previstos:
+                return {"regra": "horario_fora_da_validade", "trecho": frase.strip()}
+            vereditos.append("IMC" if "IMC" in previstos else "VMC")  # vários aeródromos: o pior (DJ6)
+        # afirmação favorável: basta uma hora citada ser IMC; desfavorável: todas as horas citadas VMC
+        if "IMC" in vereditos and (achado := harness.contradicao(frase, "IMC")):
+            return {"regra": "previsao_" + achado[0], "trecho": achado[1]}
+        if all(v == "VMC" for v in vereditos) and (achado := harness.contradicao(frase, "VMC")):
+            return {"regra": "previsao_" + achado[0], "trecho": achado[1]}
+    resto = " ".join(sem_horario)
+    if resto.strip() and (achado := harness.contradicao(resto, referencia.veredito)):
+        return {"regra": achado[0], "trecho": achado[1]}
+    return None
+
+
+def _horas_citadas(frase: str) -> set[int]:
+    minusculas = frase.lower()
+    return {int(m.group(1)) for padrao in _RE_HORA for m in padrao.finditer(minusculas)}
+
+
+def _proxima_ocorrencia(hora: int, agora: datetime) -> datetime:
+    """Primeira ocorrência daquela hora UTC a partir da hora atual (DJ6)."""
+    base = agora.replace(minute=0, second=0, microsecond=0)
+    momento = base.replace(hour=hora)
+    return momento if momento >= base else momento + timedelta(days=1)
 
 
 def _nome_estacao(resultado) -> str | None:

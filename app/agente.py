@@ -314,7 +314,7 @@ def _verificar_com_horario(texto: str, referencia: Resumo, janelas: list[ResumoJ
         vereditos = []
         for hora in sorted(horas):
             momento = _proxima_ocorrencia(hora, agora)
-            previstos = [v for v in (harness_taf.veredito_na_hora(j, momento) for j in janelas) if v]
+            previstos = [v for v in (_veredito_previsto(j, momento) for j in janelas) if v]
             if not previstos:
                 return {"regra": "horario_fora_da_validade", "trecho": frase.strip()}
             vereditos.append("IMC" if "IMC" in previstos else "VMC")  # vários aeródromos: o pior (DJ6)
@@ -327,6 +327,14 @@ def _verificar_com_horario(texto: str, referencia: Resumo, janelas: list[ResumoJ
     if resto.strip() and (achado := harness.contradicao(resto, referencia.veredito)):
         return {"regra": achado[0], "trecho": achado[1]}
     return None
+
+
+def _veredito_previsto(janela: ResumoJanela, momento: datetime) -> str | None:
+    """Veredito da hora; o fim exato da validade ("de 07Z a 12Z") vale pela última hora prevista."""
+    veredito = harness_taf.veredito_na_hora(janela, momento)
+    if veredito is None and janela.validade_fim == momento.strftime("%Y-%m-%dT%H:%M:%SZ"):
+        veredito = harness_taf.veredito_na_hora(janela, momento - timedelta(minutes=1))
+    return veredito
 
 
 def _horas_citadas(frase: str) -> set[int]:

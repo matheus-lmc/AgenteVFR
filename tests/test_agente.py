@@ -649,6 +649,8 @@ def test_req_j11_bloqueia(rodar, explicacao, regra):
     "A partir das 21 UTC dá para voar visual.",
     "Entre 18Z e 20Z fica abaixo dos mínimos.",
     "Agora dá para voar visual em SBGR. Das 18Z às 21Z as condições ficam abaixo dos mínimos; a melhor janela começa às 21Z.",
+    # achado com o modelo real (10/11/2026): o fim da validade (12Z) citado como fim da janela não é "fora da validade"
+    "A melhor janela para voar VFR é de 21Z a 12Z, com condições VMC previstas.",
 ])
 def test_req_j11_passa(rodar, explicacao):
     r, _, _, _ = rodar_janela(rodar, explicacao)
@@ -669,3 +671,10 @@ def test_req_j11_icao_da_janela_conta_como_consultado(rodar):
 
 def test_req_j12_prefiltro_oferece_a_janela():
     assert "melhor janela" in harness.prefiltrar_pergunta("E daqui a 3 dias?").motivo.lower()
+
+
+@pytest.mark.ollama
+def test_req_j09_ollama_real_janela(tmp_path):
+    r = Agente(pasta_traces=tmp_path).perguntar("Qual a melhor janela pra voar VFR em Congonhas nas próximas horas?")
+    assert [j["icao"] for j in r.janelas] == ["SBSP"], r
+    assert r.janelas[0]["veredito"] in {"JANELA", "RECUSA"}

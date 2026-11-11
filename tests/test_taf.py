@@ -288,3 +288,10 @@ def test_texto_modelo_janela():
 def test_texto_modelo_janela_recusa():
     t = texto_modelo_janela(avaliar("TAF SBGR 102222Z NIL").resumo)
     assert "SBGR" in t and "NIL" in t
+
+
+def test_req_j05_becmg_so_de_vento_nao_vira_o_grupo_responsavel():
+    """Achado no navegador (10/11/2026, TAF real de SBSP): o IMC vinha da base, mas aparecia 'BECMG 1102/1104' (só vento)."""
+    r = avaliar(REAIS["SBSP"], icao="SBSP")
+    imc = [(p["inicio"][11:13], p["fim"][11:13], p["grupo"]) for p in r.resumo.periodos if p["veredito"] == "IMC"]
+    assert imc == [("00", "07", "base")]

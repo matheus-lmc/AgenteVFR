@@ -35,7 +35,7 @@ antes de existir um requisito aprovado que o justifique e um teste que o verifiq
 | 02 | Ferramentas (API aviationweather + cache) | `02-ferramentas/` | concluído (61 testes verdes + 1 ao vivo) |
 | 03 | Agente (loop, prompt, traço) | `03-agente/` | concluído (73 testes verdes; teste com Ollama real falha por H7, registrado) |
 | 04 | Interface + Docker | `04-interface/` | concluído (36 testes verdes; Compose medido: 15,2 s por pergunta) |
-| 05 | Janela VFR pelo TAF (etapa 4b) | `05-janela-taf/` | requisitos e design aprovados; testes em andamento |
+| 05 | Janela VFR pelo TAF (etapa 4b) | `05-janela-taf/` | concluído (95 testes verdes + 1 com Ollama real) |
 
 ## Matriz de rastreabilidade
 
@@ -119,3 +119,22 @@ Preenchida no passo 5 de cada módulo.
 | REQ-I-17 imagem | — | `docker compose build` | `Dockerfile` |
 | REQ-I-18 Compose | — | `docker compose up` + saúde no contêiner | `docker-compose.yml` |
 | REQ-I-19 tempo por pergunta | — | 5 perguntas: média 15,2 s | `tarefas.md` |
+
+### 05 — Janela VFR pelo TAF (`tests/test_taf.py` + partes de `test_agente.py`, `test_prompts.py`, `test_main.py`; 11/11/2026)
+
+| Requisito | Perigo | Testes | Código |
+|---|---|---|---|
+| REQ-J-01 formato | H1 | `test_req_j01_*` (12) | `harness_taf._avaliar` (cabeçalho) |
+| REQ-J-02 TAF sem uso / datas | H2 | `test_req_j02_*` (9) | `_periodo`, `_dia_hora` |
+| REQ-J-03 condições | H1 | `test_req_j03_*` (9) | `_cond` + `harness.ler_condicoes` |
+| REQ-J-04 grupos de mudança (pior caso) | H1 | `test_req_j04_*` (10) | `_aplicar`, `_avaliar_hora` |
+| REQ-J-05 veredito por hora | H1 | `test_req_j05_*` (6) | `_avaliar_hora` + `harness.eh_vmc` |
+| REQ-J-06 períodos e melhor janela | — | `test_req_j06_*` (3) + reais | `_periodos`, `_melhor_janela` |
+| REQ-J-07 resumo compacto | — (Context Eng.) | `test_req_j07_*` (4) | `ResumoJanela` |
+| REQ-J-08 independência do modelo | H1, H3 | `test_req_j08_*` (2) | imports |
+| TAFs reais (14) | — | `test_reais_*` (16) | — |
+| REQ-J-09 ferramenta `avaliar_janela` | H10 | `test_req_j09_*` (5, 1 com Ollama real) | `Agente._executar` |
+| REQ-J-10 prompt v3 | — | `test_req_j10_*` (1) | `PROMPT_SISTEMA_V3` |
+| REQ-J-11 verificação com horário | H3 | `test_req_j11_*` (13) | `_verificar_com_horario`, `_veredito_previsto` |
+| REQ-J-12 pré-filtro oferece a janela | H4 | `test_req_j12_*` (1) | `MOTIVOS_PERGUNTA` |
+| REQ-J-13 linha do tempo | H10 | `test_req_j13_*` (1) + navegador | `cartaoPrevisao()` |

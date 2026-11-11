@@ -19,6 +19,23 @@ Cada tarefa só é marcada quando os testes citados passam.
 
 ## Portão 5 — fechamento
 
-- [ ] T10. Ollama real: pergunta de janela em Congonhas; guardar traço em `traces/demo/`
-- [ ] T11. Conferência no navegador (linha do tempo, 375 px)
-- [ ] T12. Matriz de rastreabilidade e commit
+- [x] T10. Ollama real: pergunta de janela em Congonhas; guardar traço em `traces/demo/` — 11/11/2026 00:29Z,
+      `llama3.1:8b`, prompt v3, 42 s: o modelo chamou `avaliar_janela(SBSP)` e, após o lembrete, `buscar_metar(SBSP)`;
+      explicação aceita ("melhor janela … de 07Z a 12Z (5 horas)"); traço `049c3dd3476c` em `traces/demo/`.
+      `test_req_j09_ollama_real_janela` passou (41 s).
+- [x] T11. Conferência no navegador (linha do tempo, 375 px) — linha do tempo, melhor janela contornada, lista
+      textual e TAF bruto conferidos; em 375 px a faixa rola por dentro, sem rolagem horizontal na página.
+- [x] T12. Matriz de rastreabilidade e commit
+
+## Achados com o modelo real e o navegador (11/11/2026)
+
+- **Bug do verificador, achado com o modelo real:** "a melhor janela é de 07Z a 12Z" foi bloqueada como
+  `horario_fora_da_validade` porque 12Z é o **fim** da validade (limite exclusivo). Corrigido: o fim exato da
+  validade vale pela última hora prevista. Teste de regressão em `test_req_j11_passa`.
+- **Rótulo enganoso, achado no navegador:** com o TAF real de SBSP aparecia "04Z–07Z IMC (BECMG 1102/1104)", mas
+  esse BECMG só muda o vento — o IMC vinha da base (`BKN011`). Corrigido: BECMG que não muda visibilidade nem
+  nuvens não vira o "grupo responsável". Teste `test_req_j05_becmg_so_de_vento_nao_vira_o_grupo_responsavel`.
+- **Bom exemplo de H10 para a demo:** às 00Z o METAR de SBSP estava VMC (`OVC015`, no limite), enquanto o TAF
+  previa IMC até 07Z (`BKN011`). Observação e previsão discordam — por isso a previsão fica separada do veredito.
+- O modelo chamou `avaliar_janela` antes de `buscar_metar` e só consultou o METAR depois do lembrete (REQ-A-05):
+  a pergunta de janela leva ~40 s (3–4 chamadas ao modelo).

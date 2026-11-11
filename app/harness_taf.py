@@ -240,7 +240,9 @@ def _avaliar_hora(hora: datetime, base: _Cond, grupos: list[_Grupo]) -> dict:
     vigente, grupo_vigente = base, "base"
     for g in grupos:
         if g.tipo == "BECMG" and g.fim <= hora:
-            vigente, grupo_vigente = _aplicar(vigente, g.cond), g.rotulo
+            vigente = _aplicar(vigente, g.cond)
+            if g.cond.vis is not None or g.cond.camadas is not None:  # BECMG só de vento não é "responsável"
+                grupo_vigente = g.rotulo
     candidatos = [(vigente, grupo_vigente)]
     for g in grupos:
         if g.inicio <= hora < g.fim:  # transição de BECMG ou TEMPO/PROB ativo: pior caso (D1)

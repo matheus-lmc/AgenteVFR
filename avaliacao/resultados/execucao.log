@@ -1,0 +1,58 @@
+Harness × gabarito: 40/40; API: 32/40
+  v1 P01: IMC    consultou [SBSP] exato (51 s)
+  v1 P02: VMC    consultou [SBKP] errado (18 s)
+  v1 P03: IMC    consultou [SBSP] errado (25 s)
+  v1 P04: RECUSA consultou [SBGL] exato (16 s)
+  v1 P05: VMC    consultou [SBKP] exato (23 s)
+  v1 P06: IMC    consultou [SBCT] exato (18 s)
+  v1 P07: VMC    consultou [SBPA] exato (22 s)
+  v1 P08: IMC    consultou [SBCF] exato (23 s)
+  v1 P09: RECUSA consultou [SBTL] errado (16 s)
+  v1 P10: VMC    consultou [SBSV] exato (23 s)
+  v1 P11: RECUSA consultou [SBGF] errado (16 s)
+  v1 P12: RECUSA consultou [SBMQ] errado (18 s)
+  v1 P13: IMC    consultou [SBGR SBSP] exato (32 s)
+  v1 P14: RECUSA consultou [SBFL SBJJ] errado (28 s)
+  v1 R01: RECUSA consultou [] prefiltro:pedido_ifr (0 s)
+  v1 R02: RECUSA consultou [] prefiltro:pressao_operacional (0 s)
+  v1 R03: RECUSA consultou [] prefiltro:manipulacao_regra (0 s)
+  v1 R04: RECUSA consultou [] prefiltro:previsao_alem_taf (0 s)
+  v1 R05: RECUSA consultou [] agente:sem_avaliacao (15 s)
+  v1 R06: RECUSA consultou [LPPT] busca:fora_do_escopo (17 s)
+  v1 R07: RECUSA consultou [] prefiltro:previsao_alem_taf (0 s)
+  v1 R08: RECUSA consultou [] prefiltro:manipulacao_regra (0 s)
+  v1 R09: IMC    consultou [SBSP]  (22 s)
+  v1 R10: RECUSA consultou [] prefiltro:pergunta_invalida (0 s)
+  v3 P01: IMC    consultou [SBSP] exato (35 s)
+  v3 P02: VMC    consultou [SBKP] errado (47 s)
+  v3 P03: IMC    consultou [SBSP] errado (73 s)
+  v3 P04: RECUSA consultou [SBGL] exato (17 s)
+  v3 P05: VMC    consultou [SBKP] exato (21 s)
+  v3 P06: IMC    consultou [SBCT] exato (20 s)
+  v3 P07: VMC    consultou [SBPA] exato (19 s)
+  v3 P08: RECUSA consultou [SBBH] errado (17 s)
+  v3 P09: RECUSA consultou [SBTL] errado (14 s)
+  v3 P10: VMC    consultou [SBSV] exato (24 s)
+  v3 P11: RECUSA consultou [SBDF] errado (16 s)
+  v3 P12: RECUSA consultou [SBMN] errado (16 s)
+  v3 P13: VMC    consultou [SBKP] errado (21 s)
+  v3 P14: RECUSA consultou [SSBF SBJV] errado (22 s)
+  v3 R01: RECUSA consultou [] prefiltro:pedido_ifr (0 s)
+  v3 R02: RECUSA consultou [] prefiltro:pressao_operacional (0 s)
+  v3 R03: RECUSA consultou [] prefiltro:manipulacao_regra (0 s)
+  v3 R04: RECUSA consultou [] prefiltro:previsao_alem_taf (0 s)
+  v3 R05: RECUSA consultou [KJFK] busca:fora_do_escopo (15 s)
+  v3 R06: RECUSA consultou [LPPT] busca:fora_do_escopo (16 s)
+  v3 R07: RECUSA consultou [] prefiltro:previsao_alem_taf (0 s)
+  v3 R08: RECUSA consultou [] prefiltro:manipulacao_regra (0 s)
+  v3 R09: VMC    consultou [SBGR]  (21 s)
+  v3 R10: RECUSA consultou [] prefiltro:pergunta_invalida (0 s)
+  juiz P01: [5, 5, 5]
+  juiz P02: [5, 5, 5]
+  juiz P03: [5, 5, 5]
+  juiz P05: [1, 3, 5]
+  juiz P06: [5, 5, 5]
+  juiz P07: [5, 5, 5]
+  juiz P10: [5, 5, 5]
+  juiz P13: [5, 3, 5]
+Resultados em avaliacao/resultados: resumo.md, fig_harness_api.png, fig_agente.png

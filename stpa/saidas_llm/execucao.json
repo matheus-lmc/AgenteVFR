@@ -1,0 +1,40 @@
+{
+  "inicio": "2026-11-11T12:59:45Z",
+  "modelo": "llama3.1:8b",
+  "opcoes": {
+    "temperature": 0.1,
+    "seed": 42,
+    "num_thread": 4,
+    "num_ctx": 8192
+  },
+  "passos": [
+    {
+      "passo": 1,
+      "titulo": "Passo 1 — Perdas e perigos",
+      "duracao_s": 66,
+      "prompt_eval_count": 998,
+      "eval_count": 331
+    },
+    {
+      "passo": 2,
+      "titulo": "Passo 2 — Estrutura de controle",
+      "duracao_s": 47,
+      "prompt_eval_count": 1492,
+      "eval_count": 476
+    },
+    {
+      "passo": 3,
+      "titulo": "Passo 3 — Ações de controle inseguras (UCAs)",
+      "duracao_s": 86,
+      "prompt_eval_count": 2145,
+      "eval_count": 790
+    },
+    {
+      "passo": 4,
+      "titulo": "Passo 4 — Cenários causais",
+      "duracao_s": 108,
+      "prompt_eval_count": 3098,
+      "eval_count": 823
+    }
+  ]
+}

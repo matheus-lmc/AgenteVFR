@@ -44,6 +44,8 @@ Responda em português do Brasil, em no máximo 4 frases. Termine lembrando que 
 briefing oficial (REDEMET/AIS) nem a decisão do piloto em comando.
 """
 
+PROMPT_SISTEMA_V3 = ""  # esqueleto (módulo 05)
+
 # v2 (revisão 1, perigo H7): acrescenta o passo 4 — conferir nome_estacao. O v1 fica para comparação.
 PROMPT_SISTEMA = PROMPT_SISTEMA_V2
 

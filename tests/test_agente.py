@@ -14,14 +14,14 @@ from pathlib import Path
 import httpx
 import pytest
 
-from app import harness, prompts
+from app import harness, harness_taf, prompts
 from app.agente import Agente, ClienteOllama, ErroModelo
 from app.ferramentas import ResultadoBusca
 
 UTC = timezone.utc
 FIXTURE_METAR = json.loads((Path(__file__).parent / "fixtures" / "awc" / "metar_SBGR.json").read_text())
 AGORA = datetime.fromtimestamp(FIXTURE_METAR[0]["obsTime"], UTC) + timedelta(minutes=10)
-CHAVES_RESPOSTA = {"id_traco", "veredito", "motivo", "avaliacoes", "explicacao", "origem_explicacao",
+CHAVES_RESPOSTA = {"id_traco", "veredito", "motivo", "avaliacoes", "janelas", "explicacao", "origem_explicacao",
                    "bloqueio", "aviso", "duracao_ms"}
 
 
@@ -178,7 +178,7 @@ def test_req_a01_pergunta_normal_passa_no_prefiltro(rodar):
 
 def test_req_a02_ferramentas_enviadas(rodar):
     _, modelo, _, _ = rodar(PERGUNTA, ferramentas_(chamada("buscar_metar", icao="SBGR")), texto(COERENTE_SBGR))
-    assert [f["function"]["name"] for f in modelo.recebidas[0][1]] == ["buscar_metar", "buscar_taf"]
+    assert [f["function"]["name"] for f in modelo.recebidas[0][1]] == ["buscar_metar", "avaliar_janela"]
 
 
 def test_req_a02_ferramenta_desconhecida(rodar):
@@ -222,7 +222,7 @@ def test_req_a03_resultado_do_metar_e_o_resumo_do_harness(rodar):
 
 def test_req_a03_json_da_api_nunca_entra_na_janela(rodar):
     _, modelo, _, _ = rodar(PERGUNTA,
-                            ferramentas_(chamada("buscar_metar", icao="SBGR"), chamada("buscar_taf", icao="SBGR")),
+                            ferramentas_(chamada("buscar_metar", icao="SBGR"), chamada("avaliar_janela", icao="SBGR")),
                             texto(COERENTE_SBGR))
     for mensagens, _ in modelo.recebidas:
         janela = json.dumps(mensagens, ensure_ascii=False)
@@ -230,13 +230,13 @@ def test_req_a03_json_da_api_nunca_entra_na_janela(rodar):
             assert proibido not in janela
 
 
-def test_req_a03_janela_do_taf(rodar):
-    _, modelo, _, _ = rodar(PERGUNTA,
-                            ferramentas_(chamada("buscar_metar", icao="SBGR"), chamada("buscar_taf", icao="SBGR")),
+def test_req_j09_janela_do_taf_e_o_resumo_do_harness(rodar):
+    r, modelo, _, _ = rodar(PERGUNTA,
+                            ferramentas_(chamada("buscar_metar", icao="SBGR"), chamada("avaliar_janela", icao="SBGR")),
                             texto(COERENTE_SBGR))
-    taf = json.loads(mensagens_tool(modelo, 1)[1]["content"])
-    assert set(taf) == {"icao", "status", "taf_bruto", "aviso"}
-    assert taf["taf_bruto"] == TAF_SBGR
+    esperado = harness_taf.avaliar_taf(TAF_SBGR, "SBGR", AGORA).resumo.para_dict()
+    assert json.loads(mensagens_tool(modelo, 1)[1]["content"]) == esperado
+    assert r.janelas == [esperado]
 
 
 def test_req_a03_janela_da_busca_que_falhou(rodar):
@@ -593,3 +593,79 @@ def test_req_a15_modelo_corrige_estacao_errada(rodar):
     assert "Campinas" in json.loads(mensagens_tool(modelo, 1)[0]["content"])["nome_estacao"]
     assert [(a["icao"], a["nome_estacao"]) for a in r.avaliacoes] == [
         ("SBKP", "Campinas/Viracopos Arpt, SP, BR"), ("SBGR", "Sao Paulo Intl, PR, BR")]
+
+
+# --------------------------------------------------------------------------- REQ-J-09 a J-12 janela pelo TAF
+
+# 14–18Z VMC, 18–21Z IMC (TEMPO), 21Z–12Z VMC; validade até 11/12Z. AGORA = 10/11 14:10Z.
+TAF_JANELA = "TAF SBGR 101100Z 1012/1112 09005KT CAVOK TEMPO 1018/1021 3000 BR BKN006"
+TAFS_JANELA = {"SBGR": busca("SBGR", texto=TAF_JANELA, tipo="taf")}
+PERGUNTA_JANELA = "Qual a melhor janela pra voar VFR em Guarulhos nas próximas horas?"
+
+
+def rodar_janela(rodar, explicacao, tafs=None):
+    return rodar(PERGUNTA_JANELA,
+                 ferramentas_(chamada("buscar_metar", icao="SBGR"), chamada("avaliar_janela", icao="SBGR")),
+                 texto(explicacao), tafs=TAFS_JANELA if tafs is None else tafs)
+
+
+def test_req_j09_veredito_geral_continua_do_metar(rodar):
+    r, _, _, _ = rodar_janela(rodar, "Agora está VMC em SBGR.")
+    assert r.veredito == "VMC"
+    assert r.janelas[0]["melhor_janela"] == {"inicio": "2026-11-10T21:00:00Z", "fim": "2026-11-11T12:00:00Z",
+                                             "horas": 15}
+
+
+def test_req_j09_janela_que_falhou(rodar):
+    r, modelo, _, _ = rodar_janela(rodar, "Agora está VMC em SBGR.", tafs={})
+    falha = json.loads(mensagens_tool(modelo, 1)[1]["content"])
+    assert set(falha) == {"icao", "status", "veredito", "motivo"} and falha["veredito"] == "RECUSA"
+    assert r.janelas[0]["veredito"] == "RECUSA"
+    assert r.veredito == "VMC"  # a janela não mexe no veredito geral
+
+
+def test_req_j09_traco_do_harness_do_taf(rodar):
+    _, _, _, traco = rodar_janela(rodar, "Agora está VMC em SBGR.")
+    taf = [p for p in passos(traco, "harness") if p.get("tipo_dado") == "taf"]
+    assert len(taf) == 1 and taf[0]["horas"]
+
+
+@pytest.mark.parametrize("explicacao,regra", [
+    ("Às 19Z dá para voar visual.", "previsao_imc_com_afirmacao_favoravel"),
+    ("Às 19h dá para voar visual.", "previsao_imc_com_afirmacao_favoravel"),
+    ("Às 19:30Z dá para voar visual.", "previsao_imc_com_afirmacao_favoravel"),
+    ("Às 16Z fica abaixo dos mínimos.", "previsao_vmc_com_afirmacao_desfavoravel"),
+    ("Às 13Z dá para voar visual.", "horario_fora_da_validade"),
+    ("Agora fica abaixo dos mínimos.", "vmc_com_afirmacao_desfavoravel"),
+])
+def test_req_j11_bloqueia(rodar, explicacao, regra):
+    r, _, _, _ = rodar_janela(rodar, explicacao)
+    assert r.bloqueio is not None and r.bloqueio["regra"] == regra
+    assert "Melhor janela" in r.explicacao  # texto-modelo inclui a janela
+
+
+@pytest.mark.parametrize("explicacao", [
+    "Às 16Z dá para voar visual.",
+    "A partir das 21 UTC dá para voar visual.",
+    "Entre 18Z e 20Z fica abaixo dos mínimos.",
+    "Agora dá para voar visual em SBGR. Das 18Z às 21Z as condições ficam abaixo dos mínimos; a melhor janela começa às 21Z.",
+])
+def test_req_j11_passa(rodar, explicacao):
+    r, _, _, _ = rodar_janela(rodar, explicacao)
+    assert r.bloqueio is None and r.origem_explicacao == "modelo"
+
+
+def test_req_j11_sem_janela_o_horario_nao_muda_nada(rodar):
+    r, _, _, _ = rodar(PERGUNTA, ferramentas_(chamada("buscar_metar", icao="SBGR")), texto("Às 19Z dá para voar visual."))
+    assert r.bloqueio is None
+
+
+def test_req_j11_icao_da_janela_conta_como_consultado(rodar):
+    tafs = {"SBSP": busca("SBSP", texto=TAF_JANELA.replace("SBGR", "SBSP"), tipo="taf")}
+    r, _, _, _ = rodar(PERGUNTA, ferramentas_(chamada("buscar_metar", icao="SBGR"), chamada("avaliar_janela", icao="SBSP")),
+                       texto("Agora está VMC em SBGR; veja a previsão de SBSP."), tafs=tafs)
+    assert r.bloqueio is None
+
+
+def test_req_j12_prefiltro_oferece_a_janela():
+    assert "melhor janela" in harness.prefiltrar_pergunta("E daqui a 3 dias?").motivo.lower()

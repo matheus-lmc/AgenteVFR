@@ -247,3 +247,11 @@ def test_req_i16_pagina_sem_recurso_externo():
     html = INDEX.read_text(encoding="utf-8")
     assert not re.search(r"https?://", html)
     assert "@import" not in html
+
+
+# --------------------------------------------------------------------------- REQ-J-13 linha do tempo
+
+def test_req_j13_pagina_tem_previsao_e_exemplo_de_janela(tmp_path):
+    texto = montar(tmp_path)[0].get("/").text
+    assert "Previsão (TAF)" in texto
+    assert "Qual a melhor janela pra voar VFR em Congonhas nas próximas horas?" in texto

@@ -20,6 +20,7 @@ enquanto não estiver completo, a apresentação diz "revisão do grupo em andam
 | 3. Estrutura de controle | | | |
 | 4. UCAs | | | |
 | 5. Cenários e mitigação | | | |
+| 6. Descartado da saída do Llama (confirmar o que foi descartado e o motivo) | | | |
 | 7. Não mitigados | | | |
 
 ## 0. Resumo: o que o Llama fez bem e mal

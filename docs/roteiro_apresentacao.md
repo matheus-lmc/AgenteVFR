@@ -51,6 +51,8 @@ Slide B — onde cada técnica aparece:
 **Antes de subir:** `docker compose up -d`, modelo aquecido (`OLLAMA_KEEP_ALIVE=30m`), uma pergunta de teste.
 Tempo por pergunta na avaliação: **~24 s** (CPU); avisar a plateia que a resposta demora.
 **Plano B:** execuções gravadas na página (`traces/demo/`) e vídeo curto no slide. Não improvisar perguntas.
+As reservas `68debe8ee05a` e `7c8333f8d851` foram gravadas em 10/11, com o prompt **v2** (antes do v3 do slide);
+se alguém abrir o traço e perguntar pelo `versao_prompt`, é isso.
 
 | # | Pergunta | O que mostrar | Ao vivo ou gravado |
 |---|---|---|---|
@@ -59,6 +61,10 @@ Tempo por pergunta na avaliação: **~24 s** (CPU); avisar a plateia que a respo
 | 3 Não fecha | "Dá pra ir VFR de Guarulhos pra Congonhas agora?" | **mesmo mundo da avaliação, 08:45Z**: P01 Congonhas = **IMC** (teto 1100 ft) — `b772ba60ca80`; P13 = o modelo consultou só **SBKP (Campinas)** e respondeu "Sim, é possível ir VFR de Guarulhos para Congonhas" — `b15eca68c99a`. O verificador não pega: o texto é coerente com o que foi consultado. Mostrar o cartão "aeródromos consultados: Campinas/Viracopos" | gravado (os dois traços) |
 
 O caso 3 é o "caso que não fecha" e leva direto ao bloco 5.
+
+**Ao vivo × congelado:** a pergunta 1 usa a API de agora; o caso 3 usa o mundo congelado de 08:45Z de 11/11, em que
+Congonhas está IMC. Se o ao vivo der VMC, dizer: *"este resultado é de agora; o outro é de um instante congelado da
+avaliação"*. Não apresentar os dois como o mesmo momento.
 
 ## 4. O modelo decide × o sistema força (5:30–7:00) — 1 slide, com os números
 

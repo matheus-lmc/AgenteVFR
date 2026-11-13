@@ -103,8 +103,8 @@ def origem_recusa(traco: dict, veredito: str) -> str | None:
         if p.get("tipo") == "erro":
             return f"agente:{p.get('regra')}"
     for p in passos:
-        if p.get("tipo") == "conversa" and p.get("regra") == "fora_do_tema":
-            return "agente:fora_do_tema"
+        if p.get("tipo") == "conversa" and p.get("regra") == "sem_tema":
+            return "agente:sem_tema"
     for p in passos:
         if p.get("tipo") == "harness" and p.get("codigo_recusa"):
             return f"harness:{p['codigo_recusa']}"

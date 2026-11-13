@@ -220,14 +220,18 @@ ferramenta `conversar(mensagem)`: uma saída sem consulta que o modelo pode esco
 - O prompt v4 (`PROMPT_SISTEMA_V4`, `LEMBRETE_FERRAMENTA_V4`, `FERRAMENTAS_V4`) DEVE oferecer a ferramenta
   `conversar(mensagem)` para perguntas sem aeródromo. v1 a v3 continuam com o lembrete e as ferramentas de antes
   (a avaliação troca os três juntos).
-- QUANDO o modelo chamar `conversar` **sozinha** e antes de qualquer consulta, o agente DEVE encerrar o laço e usar
-  `mensagem` como texto da conversa. Se `conversar` vier junto com outra ferramenta ou depois de uma consulta, o
-  agente DEVE ignorá-la e devolver um erro ao modelo (conta no limite de 5 chamadas).
+- QUANDO o modelo chamar `conversar` **sozinha**, como **primeira** chamada de ferramenta (`chamadas == 1`, o mesmo
+  critério do caminho de texto; uma consulta com ICAO inválido antes também conta) e a pergunta **não** pedir
+  consulta (`harness.pergunta_pede_consulta`), o agente DEVE encerrar o laço e usar `mensagem` como texto da
+  conversa. Senão, DEVE devolver um erro ao modelo (conta no limite de 5 chamadas): "chame buscar_metar" quando a
+  pergunta pede consulta; "conversar só vale sozinha…" nos outros casos.
 - QUANDO, depois do lembrete do REQ-A-05, o modelo responder de novo sem ter chamado **nenhuma** ferramenta,
   o texto também vira conversa.
 - Nos dois casos, SE a pergunta não estiver no tema (`harness.pergunta_no_tema`, REQ-H-16), o agente DEVE
-  descartar o texto do modelo e responder `RECUSA` com o motivo `fora_do_tema` (passo `conversa` com
-  `regra = "fora_do_tema"`). Senão, DEVE passar o texto pela trava de conversa (REQ-H-16) e registrar o passo
+  descartar o texto do modelo e responder `RECUSA` com o motivo neutro `sem_tema` ("Não identifiquei um aeródromo
+  nem um assunto de voo ou meteorologia…"; passo `conversa` com `regra = "sem_tema"`). O motivo é neutro porque a
+  lista também pode errar com pergunta legítima. SE a pergunta pedir consulta (só no caminho de texto), vale o
+  REQ-A-05 (`regra = "pergunta_pede_consulta"`). Senão, DEVE passar o texto pela trava de conversa (REQ-H-16) e registrar o passo
   `conversa` no traço (`passou`, `regra`, `trecho`).
 - Assunto desconexo óbvio (integral, código, receita…) já é recusado antes do modelo pelo pré-filtro
   (REQ-H-13, categoria `fora_do_tema`).
@@ -235,7 +239,8 @@ ferramenta `conversar(mensagem)`: uma saída sem consulta que o modelo pode esco
   `explicacao` = texto do modelo e `origem_explicacao = "modelo"`.
 - SE a trava pegar algo, ou se alguma ferramenta foi chamada (mesmo sem sucesso), ENTÃO vale o REQ-A-05: `RECUSA`
   `sem_avaliacao`, com o texto descartado.
-- A interface DEVE mostrar `CONVERSA` como balão de texto, sem cartão de veredito, sem aeródromos e sem previsão.
+- A interface DEVE mostrar `CONVERSA` como balão de texto, sem cartão de veredito, sem aeródromos e sem previsão,
+  mas com "Ver traço da execução" (revisão do PR #5: é o texto do modelo sem veredito validado).
 - Teste ao vivo em 13/11/2026 (v4): "Oi, tudo bem?", "O que significa VMC?" e "Como você funciona?" → `CONVERSA`
   (2–14 s); "Dá pra ir VFR em Guarulhos agora?" → `buscar_metar(SBGR)`, VMC.
 - Na avaliação (`avaliacao/avaliar.py`), `CONVERSA` conta como "sem veredito": recusa correta nas perguntas de
@@ -251,6 +256,12 @@ A trava é por regras (códigos de 4 letras, grupos de METAR, as expressões do 
 de ir/não ir). Uma paráfrase pode passar e afirmar condição sem consulta, do mesmo jeito que no verificador de
 contradição. O texto aparece como conversa, sem cartão de veredito.
 
+**O tema só é checado quando o modelo escolhe conversar** (revisão do PR #5). Numa pergunta desconexa, se o
+modelo chamar `buscar_metar`, o fluxo normal segue e sai veredito: foi o que o v3 fez com "Quanto é 15 vezes 23?"
+(SBSP, IMC). Fora dos termos do pré-filtro, a barreira de tema depende da escolha do modelo, não do código.
+Fechar isso em código pediria saber se o aeródromo consultado está na pergunta (tabela nome → ICAO, rejeitada em
+D5/D9).
+
 A lista de termos do tema também é por regras: uma pergunta desconexa que use uma palavra da lista ("tempo",
 "previsão") chega à conversa. O texto ainda passa pela trava e não vira veredito. E uma pergunta legítima sem
 nenhum termo da lista é recusada como fora do tema.
@@ -258,7 +269,12 @@ nenhum termo da lista é recusada como fora do tema.
 O modelo também pode escolher `conversar` numa pergunta que cita aeródromo e não consultar nada (falsa recusa, sem
 risco de veredito errado). Por isso a avaliação compara v3 × v4 (`avaliacao/resultados_v4/`).
 
-### Avaliação v3 × v4 (13/11/2026, `avaliacao/resultados_v4/`, mesmo conjunto fixo de dados)
+### Avaliação v3 × v4 — primeira rodada (13/11/2026, `avaliacao/resultados_v4/`, antes da revisão do PR #5)
+
+**Ilustrativa, não ganho medido** (revisão do PR #5): uma rodada só, n = 14, e R11/R12 foram escritos junto com a
+mudança (o R11 cai no pré-filtro por construção). **Pendente:** 3 rodadas com o código revisado e os
+casos novos R13, R14 e P15, em `avaliacao/resultados_v4/rodada_1..3`. A primeira tentativa (13/11) não valeu: o
+OrbStack parou durante a execução e todas as perguntas deram `erro_modelo`.
 
 | Métrica | v3 | v4 |
 |---|---|---|

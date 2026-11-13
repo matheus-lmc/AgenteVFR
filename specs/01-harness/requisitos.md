@@ -143,7 +143,7 @@ TAF (o TAF é repassado como texto e **não** entra no veredito); o loop do agen
   | `pressao_operacional` | mesmo assim, assim mesmo, mesmo com, dá um jeito |
   | `manipulacao_regra` | ignore, desconsidere, esqueça a regra, finja, sem o harness |
   | `previsao_alem_taf` | semana que vem, próxima semana, depois de amanhã, daqui a N dias, mês que vem |
-  | `fora_do_tema` *(13/11)* | integral, derivada, equação, Python/SQL, receita, poema, piada, traduza, redação |
+  | `fora_do_tema` *(13/11)* | integral, derivada, equação, Python/SQL, receita, poema, piada, traduza, redação — **só se a pergunta não tiver termo do tema** (REQ-H-16): "Traduza este METAR" passa (revisão do PR #5) |
 
 - A comparação DEVE ignorar maiúsculas/minúsculas e acentos.
 - A lista de termos DEVE ficar num único lugar do código (vai para slide e artigo).
@@ -175,10 +175,16 @@ TAF (o TAF é repassado como texto e **não** entra no veredito); o loop do agen
   afirmação favorável ou desfavorável do REQ-H-14, ou frase de ir/não ir, como "pode ir", "não dá pra voar" ou
   "o tempo está bom" (`conversa_com_veredito`).
 - Também DEVE barrar texto com mais de 500 caracteres (`conversa_longa`) e texto com cara de conta, como `∫`, `√`,
-  `dx` ou "2 + 2 = 4" (`conversa_fora_do_tema`).
+  `dx` ou "2 + 2 = 4" (`conversa_fora_do_tema`). Barra não conta: "1500/5000" e "13/11" passam.
+- Siglas de 4 letras que não são aeródromo (ICAO, IATA, ANAC, ATIS, AFIS, ZULU) não contam como código.
+- Frases de liberação também são afirmação de condição: "liberado", "autorizado", "seguro para voar",
+  "sem restrições" (revisão do PR #5: antes a trava deixava passar).
 - Caso contrário, DEVE devolver `None`. Definições e mínimos ("VMC significa…", "teto de 1500 ft") passam.
 - `pergunta_no_tema(pergunta)` DEVE devolver `True` só se a pergunta tiver um termo de `TERMOS_DO_TEMA`
   (aviação/meteorologia, cumprimento ou dúvida sobre o sistema). A lista fica num único lugar do código.
+  "Como está <lugar>" é do tema.
+- `pergunta_pede_consulta(pergunta)` DEVE devolver `True` quando a pergunta tiver um código de 4 letras (fora as
+  siglas acima) ou pedir decisão de voo ("posso ir", "dá pra decolar", "está VMC", "está aberto").
   Motivo: o llama3.1:8b não classificou o tema de forma estável (13/11/2026: marcou "Oi, tudo bem?" e
   "O que é um METAR?" como fora do tema numa rodada e acertou na outra).
 

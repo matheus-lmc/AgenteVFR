@@ -61,7 +61,7 @@ Preenchida no passo 5 de cada módulo.
 | REQ-H-13 pré-filtro | H4 | `test_req_h13_*` (27) | `TERMOS_FORA_DE_ESCOPO`, `prefiltrar_pergunta` |
 | REQ-H-14 contradição | H3 | `test_req_h14_*` (17) | `_FAVORAVEL`, `_DESFAVORAVEL`, `verificar_explicacao` |
 | REQ-H-15 substituição | H3 | `test_req_h15_*` (6) | `texto_modelo` |
-| REQ-H-16 trava de conversa e tema (rev. 13/11) | H1, H4 | `test_req_h16_*` (29) | `verificar_conversa`, `TERMOS_DO_TEMA`, `pergunta_no_tema` |
+| REQ-H-16 trava de conversa e tema (rev. 13/11) | H1, H4 | `test_req_h16_*` (46) | `verificar_conversa`, `TERMOS_DO_TEMA`, `pergunta_no_tema` |
 
 ### 02 — Ferramentas (`tests/test_ferramentas.py`, 61 testes verdes + 1 ao vivo em 10/11/2026)
 
@@ -96,7 +96,7 @@ Preenchida no passo 5 de cada módulo.
 | REQ-A-13 traço | — | `test_req_a13_*` (11) | `app/traco.py` |
 | REQ-A-14 testes sem modelo / Ollama real | — | `test_req_a14_ollama_real` (**falha: H7**) | `ModeloRoteirizado` |
 | REQ-A-15 nome da estação | H7 (só transparência) | `test_req_a15_*` (11) | `_nome_estacao` |
-| REQ-A-16 conversa sem consulta (rev. 13/11) | H1, H6 | `test_req_a16_*` (14) | `prompts.CONVERSAR`, `PROMPT_SISTEMA_V4`, passo `conversa` |
+| REQ-A-16 conversa sem consulta (rev. 13/11) | H1, H6 | `test_req_a16_*` (19) | `prompts.CONVERSAR`, `PROMPT_SISTEMA_V4`, passo `conversa` |
 
 ### 04 — Interface e Docker (`tests/test_main.py`, 36 testes verdes + conferência no navegador em 10/11/2026)
 

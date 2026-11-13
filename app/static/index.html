@@ -156,6 +156,7 @@ try { if (localStorage.getItem("tema") === "escuro") document.documentElement.da
   .descartado { text-decoration: line-through; white-space: pre-line; }
   .descartado mark { background: var(--marca); color: inherit; }
   .explicacao { white-space: pre-line; }
+  .conversa-traco { margin-top: 8px; }
 
   /* Traço em tabela compacta, recolhido no fim do balão */
   summary { cursor: pointer; font-weight: 650; min-height: 32px; list-style: none; display: flex; align-items: center; gap: 8px; }
@@ -424,7 +425,8 @@ function linhasStatus(dados, resp) {
           break;   // passou === null: recusa, explicação descartada — sem linha
         case "conversa":
           if (p.passou) linhas.push("Nenhum aeródromo consultado: resposta só de conversa, sem veredito");
-          else if (p.regra === "fora_do_tema") linhas.push("Harness: pergunta fora do tema, resposta do modelo descartada");
+          else if (p.regra === "sem_tema") linhas.push("Harness: pergunta sem termo de voo ou meteorologia; resposta do modelo descartada");
+          else if (p.regra === "pergunta_pede_consulta") linhas.push("Conversa bloqueada: a pergunta pede consulta a um aeródromo");
           else linhas.push(`Conversa bloqueada: o texto não passou na trava (${p.regra})`);
           break;
         case "erro":
@@ -502,9 +504,10 @@ async function mostrarResposta(resp, gravadaEm, dados, digitando) {
   if (digitando) digitando.parar();   // só depois do traço (ou da falha dele): sem vão em branco
   await mostrarStatus(linhasStatus(traco, resp), $("conversa"));
   if (resp.veredito === CONVERSA) {   // só a mensagem de texto do modelo, sem cartão de veredito
-    adicionar(balaoAgente(
+    adicionar(balaoAgente(   // com o traço: é a resposta do modelo que o harness não validou como veredito
       gravadaEm ? el("div", { classe: "etiqueta" }, `Execução gravada em ${fmtData(gravadaEm)}`) : null,
-      el("div", { classe: "explicacao", texto: resp.explicacao || "" })));
+      el("div", { classe: "explicacao", texto: resp.explicacao || "" }),
+      el("div", { classe: "conversa-traco" }, detalhesTraco(resp.id_traco))));
     return;
   }
   const m = balaoAgente(respostaNoBalao(resp, gravadaEm));

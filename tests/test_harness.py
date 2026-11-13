@@ -482,7 +482,7 @@ def test_req_h12_recusa_preenche_so_o_decodificado():
     ("Resolve essa equação: 2x + 3 = 7", "fora_do_tema"),
     ("Escreve um código em Python que ordena uma lista", "fora_do_tema"),
     ("Me passa uma receita de bolo", "fora_do_tema"),
-    ("Escreve um poema sobre aviões", "fora_do_tema"),
+    ("Escreve um poema sobre o mar", "fora_do_tema"),
     ("Conta uma piada", "fora_do_tema"),
     ("Traduza 'céu limpo' para o inglês", "fora_do_tema"),
 ])
@@ -506,6 +506,9 @@ def test_req_h13_ignora_maiusculas_e_acentos(pergunta):
     "O teto em Curitiba está acima dos mínimos?",
     "O que significa VMC?",
     "Oi, tudo bem?",
+    "Traduza este METAR: SBGR 131200Z 09005KT 9999 FEW030 22/15 Q1018",  # revisão do PR #5
+    "Pode traduzir o TAF de Congonhas?",
+    "Qual a redação padrão de um METAR?",
 ])
 def test_req_h13_perguntas_normais_passam(pergunta):
     assert prefiltrar_pergunta(pergunta) is None
@@ -634,6 +637,9 @@ def test_req_h15_recusa_descarta_explicacao_sem_marcar_bloqueio():
     "VMC significa condições meteorológicas visuais; o mínimo usado aqui é teto de 1500 ft e visibilidade de 5000 m.",
     "De qual aeródromo você quer saber? Pode dizer o nome da cidade.",
     "Um METAR é o boletim do aeródromo. Me informe o código ICAO do aeródromo que quer consultar.",
+    "Os mínimos VFR aqui são 1500/5000.",  # revisão do PR #5: barra não é conta
+    "Hoje é 13/11, qual aeródromo?",
+    "O ZULU time é UTC.",
 ])
 def test_req_h16_conversa_sem_veredito_passa(texto):
     assert harness.verificar_conversa(texto) is None
@@ -654,6 +660,10 @@ def test_req_h16_conversa_sem_veredito_passa(texto):
     ("∫ x dx = x²/2 + C", "conversa_fora_do_tema"),
     ("2 + 2 = 4", "conversa_fora_do_tema"),
     ("Olá! " * 120, "conversa_longa"),
+    ("Está liberado para o voo.", "conversa_com_veredito"),  # revisão do PR #5: era fail-open
+    ("Você está autorizado a decolar.", "conversa_com_veredito"),
+    ("É seguro para voar hoje.", "conversa_com_veredito"),
+    ("Sem restrições hoje.", "conversa_com_veredito"),
 ])
 def test_req_h16_conversa_com_condicao_bloqueada(texto, regra):
     assert harness.verificar_conversa(texto)[0] == regra
@@ -673,3 +683,13 @@ def test_req_h16_pergunta_no_tema(pergunta):
 ])
 def test_req_h16_pergunta_fora_do_tema(pergunta):
     assert harness.pergunta_no_tema(pergunta) is False
+
+
+@pytest.mark.parametrize("pergunta, esperado", [
+    ("Posso ir VFR em Guarulhos?", True), ("SBGR está VMC?", True), ("Como está SBGR agora?", True),
+    ("Dá pra decolar de Curitiba?", True), ("Congonhas está aberto?", True),
+    ("Oi, tudo bem?", False), ("O que significa IMC?", False), ("Como está o tempo?", False),
+    ("Qual o código ICAO de Guarulhos?", False),
+])
+def test_req_h16_pergunta_pede_consulta(pergunta, esperado):
+    assert harness.pergunta_pede_consulta(pergunta) is esperado

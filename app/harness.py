@@ -326,7 +326,10 @@ def _normalizar(texto: str) -> str:
 
 def prefiltrar_pergunta(pergunta: str) -> RecusaPergunta | None:
     normalizada = _normalizar(pergunta)
+    no_tema = pergunta_no_tema(pergunta)
     for categoria, padroes in _PADROES_PERGUNTA.items():
+        if categoria == "fora_do_tema" and no_tema:  # "Traduza este METAR" é pedido de piloto (revisão do PR #5)
+            continue
         for padrao in padroes:
             if m := padrao.search(normalizada):
                 termo = pergunta[m.start():m.end()]
@@ -378,15 +381,18 @@ def contradicao(texto: str, veredito: str) -> tuple[str, str] | None:
 # =========================================================================== conversa sem consulta (REQ-H-16)
 
 _RE_CODIGO_AERODROMO = re.compile(r"\b[A-Z]{4}\b")  # SBGR, KJFK...: nome de aeródromo sem consulta
-_SIGLAS_NAO_AERODROMO = {"ICAO", "IATA", "ANAC", "ATIS", "AFIS"}  # 4 letras, mas não são aeródromo
+_SIGLAS_NAO_AERODROMO = {"ICAO", "IATA", "ANAC", "ATIS", "AFIS", "ZULU"}  # 4 letras, mas não são aeródromo
 _RE_DADO_METAR = re.compile(r"\b(?:FEW|SCT|BKN|OVC|VV)\d{3}\b|\bCAVOK\b|\b\d{6}Z\b")
 _SEM_DADO = [  # decisão de ir/não ir, que só vale com dado consultado
     r"pode (ir|decolar|voar)", r"(da|de) (para|pra) (ir|voar|decolar)",
     r"(tempo|ceu|condic(ao|oes)) (esta |estao )?(bom|boa|bons|boas|ruim|ruins|aberto|fechado|favorave(l|is)|"
     r"desfavorave(l|is))",
+    r"liberad[oa]s?", r"autorizad[oa]s?", r"segur[oa]s? (pra|para) (voar|ir|decolar|pousar)",
+    r"sem restric(ao|oes)",
 ]
 _PADROES_SEM_DADO = [re.compile(rf"\b(?:{p})\b") for p in _SEM_DADO]
-_RE_CALCULO = re.compile(r"[∫∑√²³]|\bd[xyt]\b|\d\s*[+*/^=]\s*\d")  # resposta de conta, não de conversa
+# Sem "/": "1500/5000" e "13/11" são conversa normal (revisão do PR #5)
+_RE_CALCULO = re.compile(r"[∫∑√²³]|\bd[xyt]\b|\d\s*[+*^=]\s*\d")  # resposta de conta, não de conversa
 MAX_CARACTERES_CONVERSA = 500
 
 
@@ -398,7 +404,7 @@ TERMOS_DO_TEMA: list[str] = [
     r"voo", r"voos", r"voar", r"aviao", r"avioes", r"aviacao", r"aeronaves?", r"aerodromos?", r"aeroportos?",
     r"pista", r"decol\w*", r"pous\w*", r"pilotos?", r"briefing", r"redemet", r"minimos?", r"icao", r"previsao",
     r"oi", r"ola", r"bom dia", r"boa tarde", r"boa noite", r"tudo bem", r"obrigad\w*", r"valeu", r"tchau",
-    r"quem (e|eh) voce", r"como (voce )?funciona", r"o que voce (faz|sabe)", r"ajuda",
+    r"quem (e|eh) voce", r"como (voce )?funciona", r"o que voce (faz|sabe)", r"ajuda", r"como (esta|ta)",
 ]
 _PADROES_DO_TEMA = [re.compile(rf"\b(?:{p})\b") for p in TERMOS_DO_TEMA]
 
@@ -407,6 +413,21 @@ def pergunta_no_tema(pergunta: str) -> bool:
     """True se a pergunta tem algum termo de aviação/meteorologia, cumprimento ou dúvida sobre o sistema."""
     normalizada = _normalizar(pergunta)
     return any(p.search(normalizada) for p in _PADROES_DO_TEMA)
+
+
+_PEDE_CONSULTA = [  # decisão de voo sobre um lugar: só se responde consultando (revisão do PR #5)
+    r"(posso|pode|podemos|da (pra|para)|de (pra|para)) (ir|voar|decolar|pousar|sair)",
+    r"(esta|estao|ta) (vmc|imc|aberto|fechado|liberad[oa]|bom|boa|ruim)",
+]
+_PADROES_PEDE_CONSULTA = [re.compile(rf"\b(?:{p})\b") for p in _PEDE_CONSULTA]
+
+
+def pergunta_pede_consulta(pergunta: str) -> bool:
+    """True se a pergunta cita um código de 4 letras ou pede decisão de voo ("posso ir", "está VMC")."""
+    if any(c not in _SIGLAS_NAO_AERODROMO for c in _RE_CODIGO_AERODROMO.findall(pergunta)):
+        return True
+    normalizada = _normalizar(pergunta)
+    return any(p.search(normalizada) for p in _PADROES_PEDE_CONSULTA)
 
 
 def verificar_conversa(texto: str) -> tuple[str, str] | None:

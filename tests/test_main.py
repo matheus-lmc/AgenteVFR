@@ -18,6 +18,7 @@ from app.agente import RespostaAgente
 from app.main import criar_app, verificar_saude_ollama
 
 INDEX = Path(__file__).resolve().parent.parent / "app" / "static" / "index.html"
+CLASSICO = Path(__file__).resolve().parent.parent / "app" / "static" / "classico.html"
 SAUDE_OK = {"ollama": True, "modelo": "llama3.1:8b", "modelo_baixado": True}
 
 
@@ -238,15 +239,26 @@ def test_req_i06_criar_app_padrao(tmp_path, monkeypatch):
 # --------------------------------------------------------------------------- REQ-I-11 / REQ-I-16 (checagem do arquivo)
 
 def test_req_i11_pagina_nao_insere_html_vindo_de_dado():
-    html = INDEX.read_text(encoding="utf-8")
-    for proibido in ["innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "eval("]:
-        assert proibido not in html, proibido
+    for arq in (INDEX, CLASSICO):
+        html = arq.read_text(encoding="utf-8")
+        for proibido in ["innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "eval("]:
+            assert proibido not in html, (arq.name, proibido)
 
 
 def test_req_i16_pagina_sem_recurso_externo():
-    html = INDEX.read_text(encoding="utf-8")
-    assert not re.search(r"https?://", html)
-    assert "@import" not in html
+    for arq in (INDEX, CLASSICO):
+        html = arq.read_text(encoding="utf-8")
+        assert not re.search(r"https?://", html), arq.name
+        assert "@import" not in html, arq.name
+
+
+def test_classico_serve_a_pagina_antiga(tmp_path):
+    c, _ = montar(tmp_path)
+    r = c.get("/classico")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/html")
+    assert prompts.AVISO in r.text
+    assert 'id="lista-demo"' in r.text
 
 
 # --------------------------------------------------------------------------- REQ-J-13 linha do tempo

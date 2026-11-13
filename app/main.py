@@ -21,6 +21,7 @@ from pydantic import BaseModel, StrictStr
 from app.agente import OLLAMA_MODEL_PADRAO, OLLAMA_URL_PADRAO, Agente
 
 INDEX = Path(__file__).resolve().parent / "static" / "index.html"
+CLASSICO = Path(__file__).resolve().parent / "static" / "classico.html"
 TIMEOUT_SAUDE_S = 5.0
 _RE_ID_TRACO = re.compile(r"[0-9a-f]{12}")  # REQ-I-03: validado antes de qualquer acesso ao disco
 _log = logging.getLogger("agentevfr")
@@ -60,6 +61,10 @@ def criar_app(*, agente=None, pasta_traces: Path | None = None, pasta_demo: Path
     @app.get("/", include_in_schema=False)
     def pagina():  # REQ-I-01
         return FileResponse(INDEX, media_type="text/html")
+
+    @app.get("/classico", include_in_schema=False)
+    def pagina_classica():  # interface anterior, preservada até a troca da Task 2
+        return FileResponse(CLASSICO, media_type="text/html")
 
     @app.post("/api/perguntar")
     def perguntar(corpo: Pergunta):  # REQ-I-02

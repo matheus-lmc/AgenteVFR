@@ -292,6 +292,11 @@ TERMOS_FORA_DE_ESCOPO: dict[str, list[str]] = {
         r"\bdaqui a (\d+|dois|tres|quatro|cinco) dias\b",
         r"\bproxim[oa]s (\d+|dois|tres|quatro|cinco|seis|sete) dias\b", r"\bmes que vem\b",
     ],
+    "fora_do_tema": [  # assunto desconexo (revisão de 13/11/2026); o modelo pega o resto via conversar
+        r"\bintegra(l|is|r)\b", r"\bderivad\w*", r"\bequac(ao|oes)\b", r"\bexercicios? de\b",
+        r"\b(python|javascript|java|sql|html)\b", r"\breceitas?\b", r"\bpoem\w*", r"\bpoesia\b",
+        r"\bpiadas?\b", r"\btraduz\w*", r"\bredac(ao|oes)\b",
+    ],
 }
 
 MOTIVOS_PERGUNTA = {
@@ -299,6 +304,8 @@ MOTIVOS_PERGUNTA = {
     "pressao_operacional": "O sistema não autoriza operação contra o veredito; a decisão é do piloto em comando, "
                            "com o briefing oficial.",
     "pedido_ifr": "Planejamento IFR está fora do escopo: o sistema só avalia condições VFR de aeródromo.",
+    "fora_do_tema": "Fora do tema: o AgenteVFR só responde sobre condições VFR de aeródromos brasileiros "
+                    "(METAR/TAF).",
     "previsao_alem_taf": "Previsão além da validade do TAF (24–30 h) está fora do escopo. Posso mostrar a "
                          "melhor janela VFR dentro da validade do TAF (até ~30 h).",  # REQ-J-12
 }
@@ -365,6 +372,67 @@ def contradicao(texto: str, veredito: str) -> tuple[str, str] | None:
     for inicio, fim, sinal in sorted(ocorrencias):
         if sinal == contraditorio:
             return regra, texto[inicio:fim]
+    return None
+
+
+# =========================================================================== conversa sem consulta (REQ-H-16)
+
+_RE_CODIGO_AERODROMO = re.compile(r"\b[A-Z]{4}\b")  # SBGR, KJFK...: nome de aeródromo sem consulta
+_SIGLAS_NAO_AERODROMO = {"ICAO", "IATA", "ANAC", "ATIS", "AFIS"}  # 4 letras, mas não são aeródromo
+_RE_DADO_METAR = re.compile(r"\b(?:FEW|SCT|BKN|OVC|VV)\d{3}\b|\bCAVOK\b|\b\d{6}Z\b")
+_SEM_DADO = [  # decisão de ir/não ir, que só vale com dado consultado
+    r"pode (ir|decolar|voar)", r"(da|de) (para|pra) (ir|voar|decolar)",
+    r"(tempo|ceu|condic(ao|oes)) (esta |estao )?(bom|boa|bons|boas|ruim|ruins|aberto|fechado|favorave(l|is)|"
+    r"desfavorave(l|is))",
+]
+_PADROES_SEM_DADO = [re.compile(rf"\b(?:{p})\b") for p in _SEM_DADO]
+_RE_CALCULO = re.compile(r"[∫∑√²³]|\bd[xyt]\b|\d\s*[+*/^=]\s*\d")  # resposta de conta, não de conversa
+MAX_CARACTERES_CONVERSA = 500
+
+
+# Conversa só sai se a pergunta for do tema (revisão de 13/11/2026). O llama3.1:8b não classificou o tema de forma
+# estável (marcou "Oi, tudo bem?" e "O que é um METAR?" como fora do tema), então quem decide é esta lista.
+TERMOS_DO_TEMA: list[str] = [
+    r"vmc", r"imc", r"vfr", r"ifr", r"metar", r"taf", r"speci", r"cavok", r"teto", r"visibilidade", r"nuve(m|ns)",
+    r"nevoeiro", r"neblina", r"chuva", r"vento", r"trovoada", r"tempo", r"clima", r"meteorolog\w*",
+    r"voo", r"voos", r"voar", r"aviao", r"avioes", r"aviacao", r"aeronaves?", r"aerodromos?", r"aeroportos?",
+    r"pista", r"decol\w*", r"pous\w*", r"pilotos?", r"briefing", r"redemet", r"minimos?", r"icao", r"previsao",
+    r"oi", r"ola", r"bom dia", r"boa tarde", r"boa noite", r"tudo bem", r"obrigad\w*", r"valeu", r"tchau",
+    r"quem (e|eh) voce", r"como (voce )?funciona", r"o que voce (faz|sabe)", r"ajuda",
+]
+_PADROES_DO_TEMA = [re.compile(rf"\b(?:{p})\b") for p in TERMOS_DO_TEMA]
+
+
+def pergunta_no_tema(pergunta: str) -> bool:
+    """True se a pergunta tem algum termo de aviação/meteorologia, cumprimento ou dúvida sobre o sistema."""
+    normalizada = _normalizar(pergunta)
+    return any(p.search(normalizada) for p in _PADROES_DO_TEMA)
+
+
+def verificar_conversa(texto: str) -> tuple[str, str] | None:
+    """(regra, trecho) se o texto sem consulta afirma condição ou cita aeródromo/dado; None se é só conversa.
+
+    Uma resposta do modelo sem nenhuma ferramenta consultada só pode sair como conversa se não trouxer veredito
+    nem dado meteorológico: sem isso o modelo poderia dizer "SBGR está VMC" sem o harness ter visto o METAR.
+    """
+    if not texto.strip():
+        return "conversa_vazia", ""
+    if len(texto) > MAX_CARACTERES_CONVERSA:
+        return "conversa_longa", texto[:80]
+    if m := _RE_CALCULO.search(texto):
+        return "conversa_fora_do_tema", m.group(0)
+    codigos = [c for c in _RE_CODIGO_AERODROMO.findall(texto) if c not in _SIGLAS_NAO_AERODROMO]
+    if codigos:
+        return "conversa_cita_aerodromo", codigos[0]
+    if m := _RE_DADO_METAR.search(texto):
+        return "conversa_cita_dado", m.group(0)
+    for veredito in (Veredito.VMC.value, Veredito.IMC.value):
+        if achado := contradicao(texto, veredito):
+            return "conversa_com_veredito", achado[1]
+    normalizada = _normalizar(texto)
+    for padrao in _PADROES_SEM_DADO:
+        if m := padrao.search(normalizada):
+            return "conversa_com_veredito", texto[m.start():m.end()]
     return None
 
 

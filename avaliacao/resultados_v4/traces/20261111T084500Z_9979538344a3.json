@@ -1,0 +1,30 @@
+{
+  "id": "9979538344a3",
+  "inicio": "2026-11-11T08:45:00Z",
+  "pergunta": "Vai dar pra voar VFR em Congonhas semana que vem?",
+  "modelo": "llama3.1:8b",
+  "versao_prompt": "v4",
+  "passos": [
+    {
+      "tipo": "prefiltro",
+      "t_ms": 0,
+      "passou": false,
+      "regra": "previsao_alem_taf",
+      "termo": "semana que vem",
+      "motivo": "Previsão além da validade do TAF (24–30 h) está fora do escopo. Posso mostrar a melhor janela VFR dentro da validade do TAF (até ~30 h)."
+    }
+  ],
+  "resposta": {
+    "id_traco": "9979538344a3",
+    "veredito": "RECUSA",
+    "motivo": "Previsão além da validade do TAF (24–30 h) está fora do escopo. Posso mostrar a melhor janela VFR dentro da validade do TAF (até ~30 h).",
+    "avaliacoes": [],
+    "explicacao": "Previsão além da validade do TAF (24–30 h) está fora do escopo. Posso mostrar a melhor janela VFR dentro da validade do TAF (até ~30 h). Consulte o briefing oficial (REDEMET/AIS).",
+    "origem_explicacao": "texto_modelo",
+    "bloqueio": null,
+    "aviso": "Ferramenta acadêmica. Não substitui o briefing meteorológico oficial.",
+    "duracao_ms": 0,
+    "janelas": []
+  },
+  "duracao_ms": 0
+}

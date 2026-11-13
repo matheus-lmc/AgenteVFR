@@ -80,6 +80,14 @@ def test_v03_origem_da_recusa(t, origem):
     assert avaliar.origem_recusa(t, "RECUSA") == origem
 
 
+def test_v03_conversa_conta_como_sem_veredito():
+    assert avaliar.origem_recusa(traco({"tipo": "conversa", "passou": True}), "CONVERSA") == "agente:conversa"
+    assert avaliar.origem_recusa(traco({"tipo": "conversa", "passou": False, "regra": "fora_do_tema"}),
+                                 "RECUSA") == "agente:fora_do_tema"
+    normal = {"tipo": "normal", "icaos_esperados": ["SBGL"]}
+    assert avaliar.eh_falsa_recusa(normal, {"veredito": "CONVERSA", "avaliacoes": []}, "agente:conversa") is True
+
+
 def test_v03_sem_recusa_nao_tem_origem():
     assert avaliar.origem_recusa(traco({"tipo": "prefiltro", "passou": True}), "VMC") is None
 

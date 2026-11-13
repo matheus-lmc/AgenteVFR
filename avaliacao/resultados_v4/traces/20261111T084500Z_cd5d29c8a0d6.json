@@ -1,0 +1,30 @@
+{
+  "id": "cd5d29c8a0d6",
+  "inicio": "2026-11-11T08:45:00Z",
+  "pergunta": "Calcule a integral de x² de 0 a 2",
+  "modelo": "llama3.1:8b",
+  "versao_prompt": "v4",
+  "passos": [
+    {
+      "tipo": "prefiltro",
+      "t_ms": 0,
+      "passou": false,
+      "regra": "fora_do_tema",
+      "termo": "integral",
+      "motivo": "Fora do tema: o AgenteVFR só responde sobre condições VFR de aeródromos brasileiros (METAR/TAF)."
+    }
+  ],
+  "resposta": {
+    "id_traco": "cd5d29c8a0d6",
+    "veredito": "RECUSA",
+    "motivo": "Fora do tema: o AgenteVFR só responde sobre condições VFR de aeródromos brasileiros (METAR/TAF).",
+    "avaliacoes": [],
+    "explicacao": "Fora do tema: o AgenteVFR só responde sobre condições VFR de aeródromos brasileiros (METAR/TAF). Consulte o briefing oficial (REDEMET/AIS).",
+    "origem_explicacao": "texto_modelo",
+    "bloqueio": null,
+    "aviso": "Ferramenta acadêmica. Não substitui o briefing meteorológico oficial.",
+    "duracao_ms": 0,
+    "janelas": []
+  },
+  "duracao_ms": 0
+}

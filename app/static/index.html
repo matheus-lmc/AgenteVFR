@@ -293,6 +293,8 @@ try { if (localStorage.getItem("tema") === "escuro") document.documentElement.da
 <script>
 "use strict";
 const VEREDITOS = ["VMC", "IMC", "RECUSA"];
+const CONVERSA = "CONVERSA";   // sem consulta e sem veredito: só texto, sem cartão (REQ-A-16)
+function respostaValida(v) { return VEREDITOS.includes(v) || v === CONVERSA; }
 const TEMPO_LIMITE_MS = 330000;   // maior que os 300 s do Ollama (REQ-I-14)
 const TEMPO_LIMITE_TRACO_MS = 15000;
 const ATRASO_STATUS_MS = 250;     // intervalo entre as linhas de status (0 com prefers-reduced-motion)
@@ -395,11 +397,13 @@ function linhasStatus(dados, resp) {
           const r = p.resposta || {};
           for (const t of r.tool_calls || []) {
             const f = t.function || {}; const a = f.arguments || {};
-            linhas.push(`Modelo pediu ${f.name}(${typeof a === "object" ? (a.icao || "") : a})`);
+            if (f.name === "conversar") linhas.push("Modelo pediu conversar (responder sem consultar aeródromo)");
+            else linhas.push(`Modelo pediu ${f.name}(${typeof a === "object" ? (a.icao || "") : a})`);
           }
           break;
         }
         case "ferramenta": {
+          if (p.nome === "conversar") break;   // não busca nada; a linha do modelo já diz
           const icao = p.argumentos && typeof p.argumentos === "object" ? (p.argumentos.icao || "") : "";
           const dado = { buscar_metar: "o METAR", avaliar_janela: "o TAF" }[p.nome] || p.nome;
           const ok = p.resultado && p.resultado.status === "ok";
@@ -418,6 +422,11 @@ function linhasStatus(dados, resp) {
           if (p.passou === true) linhas.push("Verificador: sem contradição com o veredito (não confere valores)");
           else if (p.passou === false) linhas.push(`Verificador bloqueou a explicação (${p.regra})`);
           break;   // passou === null: recusa, explicação descartada — sem linha
+        case "conversa":
+          if (p.passou) linhas.push("Nenhum aeródromo consultado: resposta só de conversa, sem veredito");
+          else if (p.regra === "fora_do_tema") linhas.push("Harness: pergunta fora do tema, resposta do modelo descartada");
+          else linhas.push(`Conversa bloqueada: o texto não passou na trava (${p.regra})`);
+          break;
         case "erro":
           linhas.push(`Erro: ${p.regra}`);
           break;
@@ -430,7 +439,9 @@ function linhasStatus(dados, resp) {
   return linhas;
 }
 
-function ehAlerta(linha) { return linha.startsWith("Verificador bloqueou") || linha.startsWith("Erro:"); }
+function ehAlerta(linha) {
+  return linha.startsWith("Verificador bloqueou") || linha.startsWith("Conversa bloqueada") || linha.startsWith("Erro:");
+}
 
 async function mostrarStatus(linhas, destino) {
   const atraso = MOVIMENTO_REDUZIDO.matches ? 0 : ATRASO_STATUS_MS;
@@ -472,7 +483,7 @@ async function perguntar(texto) {
     });
     if (!r.ok) throw new Error(r.status === 422 ? "pergunta em formato inválido." : `o servidor respondeu ${r.status}.`);
     const resp = await r.json();
-    if (!resp || !VEREDITOS.includes(resp.veredito)) throw new Error("resposta sem veredito válido.");
+    if (!resp || !respostaValida(resp.veredito)) throw new Error("resposta sem veredito válido.");
     clearTimeout(limite);
     await mostrarResposta(resp, null, null, digitando);
   } catch (e) {
@@ -490,6 +501,12 @@ async function mostrarResposta(resp, gravadaEm, dados, digitando) {
   const traco = dados || await carregarTraco(resp.id_traco);
   if (digitando) digitando.parar();   // só depois do traço (ou da falha dele): sem vão em branco
   await mostrarStatus(linhasStatus(traco, resp), $("conversa"));
+  if (resp.veredito === CONVERSA) {   // só a mensagem de texto do modelo, sem cartão de veredito
+    adicionar(balaoAgente(
+      gravadaEm ? el("div", { classe: "etiqueta" }, `Execução gravada em ${fmtData(gravadaEm)}`) : null,
+      el("div", { classe: "explicacao", texto: resp.explicacao || "" })));
+    return;
+  }
   const m = balaoAgente(respostaNoBalao(resp, gravadaEm));
   m.classList.add("com-resposta");
   adicionar(m);
@@ -721,7 +738,7 @@ async function abrirGravada(id, inicio) {
   esconderSugestoes();
   try {
     const dados = await carregarTraco(id);
-    if (!dados || !dados.resposta || !VEREDITOS.includes(dados.resposta.veredito)) throw new Error();
+    if (!dados || !dados.resposta || !respostaValida(dados.resposta.veredito)) throw new Error();
     const resp = { ...dados.resposta, id_traco: dados.resposta.id_traco || id };
     tracos.set(resp.id_traco, dados);
     adicionar(balaoUsuario(dados.pergunta || ""));

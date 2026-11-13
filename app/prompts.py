@@ -5,7 +5,7 @@ Mudou o texto? Crie PROMPT_SISTEMA_V2, aponte PROMPT_SISTEMA para ele e troque V
 (o traço registra a versão usada em cada execução).
 """
 
-VERSAO_PROMPT = "v3"
+VERSAO_PROMPT = "v4"
 
 PROMPT_SISTEMA_V1 = """\
 Você é um assistente de briefing meteorológico VFR para aeródromos brasileiros, usado em um projeto acadêmico.
@@ -67,11 +67,51 @@ Responda em português do Brasil, em no máximo 4 frases. Termine lembrando que 
 briefing oficial (REDEMET/AIS) nem a decisão do piloto em comando.
 """
 
+PROMPT_SISTEMA_V4 = """\
+Você é um assistente de briefing meteorológico VFR para aeródromos brasileiros, usado em um projeto acadêmico.
+
+Como trabalhar:
+1. Identifique os aeródromos citados na pergunta e converta cada um para o código ICAO de 4 letras.
+2. Se a pergunta citar aeródromo, chame buscar_metar para CADA aeródromo citado antes de responder.
+   Não fale das condições de um aeródromo sem consultar.
+3. O resultado traz o campo "veredito" (VMC, IMC ou RECUSA), calculado por um módulo de regras.
+   Use esse veredito exatamente como veio. Nunca recalcule nem contradiga.
+4. O resultado traz "nome_estacao", o nome da estação na base meteorológica (pode vir em inglês ou abreviado).
+   Confira se é o aeródromo que a pergunta pediu. Se for outro aeródromo, chame buscar_metar de novo com o
+   código correto antes de responder.
+5. Se o veredito for RECUSA, diga apenas o motivo informado.
+6. Na explicação, cite o teto (teto_ft), a visibilidade (vis_m) e o METAR (metar_bruto) que vieram da
+   ferramenta. Não invente nenhum dado que não esteja no resultado.
+7. Se a pergunta for sobre quando voar, melhor horário ou próximas horas, chame também avaliar_janela.
+   Ela devolve os períodos VMC/IMC previstos pelo TAF e a melhor_janela, calculados por regras.
+   Use os períodos e a melhor janela exatamente como vieram, cite os horários em UTC (ex.: 15Z) e deixe
+   claro que é previsão, não observação. Não fale de horários fora dos períodos devolvidos.
+8. Se a pergunta citar um aeródromo de fora do Brasil, chame buscar_metar com o código ICAO dele mesmo assim:
+   o resultado diz se ele está no escopo.
+9. Se a pergunta NÃO citar nenhum aeródromo (cumprimento, dúvida sobre o que é VMC ou IMC, como você funciona),
+   NÃO chame buscar_metar nem avaliar_janela e NÃO escolha um aeródromo por conta própria. Chame conversar,
+   com a sua resposta em "mensagem": sem dizer se as condições permitem voar, sem citar código de aeródromo,
+   e perguntando qual aeródromo o piloto quer consultar.
+10. Se a pergunta não tiver relação com voo, meteorologia aeronáutica ou este sistema (ex.: matemática,
+   programação, receitas), NÃO responda o pedido: chame conversar dizendo que você só responde sobre VFR.
+
+Responda em português do Brasil, em no máximo 4 frases. Termine lembrando que a consulta não substitui o
+briefing oficial (REDEMET/AIS) nem a decisão do piloto em comando.
+"""
+
 # v2 (revisão 1, perigo H7): acrescenta o passo 4 — conferir nome_estacao. O v1 fica para comparação.
 # v3 (módulo 05): acrescenta o passo 7 — avaliar_janela (TAF) para perguntas de horário. v1/v2 preservados.
-PROMPT_SISTEMA = PROMPT_SISTEMA_V3
+# v4 (13/11, REQ-A-16): passo 2 só vale com aeródromo citado; 8 — aeródromo estrangeiro também é consultado;
+# 9 — sem aeródromo, ferramenta conversar; 10 — assunto desconexo não é respondido (o código também barra,
+# harness.pergunta_no_tema).
+PROMPT_SISTEMA = PROMPT_SISTEMA_V4
 
-LEMBRETE_FERRAMENTA = "Antes de responder, consulte buscar_metar para cada aeródromo citado na pergunta."
+LEMBRETE_FERRAMENTA_V1 = "Antes de responder, consulte buscar_metar para cada aeródromo citado na pergunta."
+LEMBRETE_FERRAMENTA_V4 = ("Se a pergunta citar um aeródromo, consulte buscar_metar para cada aeródromo citado antes "
+                          "de responder. Se não citar nenhum, chame conversar com a sua resposta, sem chamar "
+                          "buscar_metar.")
+# O lembrete acompanha o prompt (avaliacao/avaliar.py troca os dois): v1 a v3 usam o V1.
+LEMBRETE_FERRAMENTA = LEMBRETE_FERRAMENTA_V4
 
 AVISO = "Ferramenta acadêmica. Não substitui o briefing meteorológico oficial."
 
@@ -86,7 +126,7 @@ _PARAMETRO_ICAO = {
     "required": ["icao"],
 }
 
-FERRAMENTAS: list[dict] = [
+FERRAMENTAS_V3: list[dict] = [
     {
         "type": "function",
         "function": {
@@ -106,3 +146,24 @@ FERRAMENTAS: list[dict] = [
         },
     },
 ]
+
+# v4 (REQ-A-16): o llama3.1:8b chama alguma ferramenta mesmo sem aeródromo na pergunta (inventou SBKP no v3 e
+# "NULL" no v4 sem esta ferramenta). conversar dá a ele uma saída sem consulta; o texto passa pela trava do
+# harness (REQ-H-16) e nunca vira veredito.
+CONVERSAR: dict = {
+    "type": "function",
+    "function": {
+        "name": "conversar",
+        "description": "Responde sem consultar aeródromo, só quando a pergunta não cita nenhum aeródromo "
+                       "(cumprimento ou dúvida geral). Não dá veredito nem fala de condições.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "mensagem": {"type": "string", "description": "A resposta ao piloto, em português do Brasil."}
+            },
+            "required": ["mensagem"],
+        },
+    },
+}
+FERRAMENTAS_V4: list[dict] = [*FERRAMENTAS_V3, CONVERSAR]
+FERRAMENTAS = FERRAMENTAS_V4  # avaliacao/avaliar.py troca junto com o prompt: v1 a v3 usam FERRAMENTAS_V3

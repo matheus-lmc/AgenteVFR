@@ -343,10 +343,11 @@ async function perguntar(texto) {
 
 // ---------------------------------------------------------------- resultado
 function mostrarResultado(resp, gravadaEm) {
-  if (!resp || !VEREDITOS.includes(resp.veredito)) { mostrarErro("resposta sem veredito válido."); return; }
+  const conversa = resp && resp.veredito === "CONVERSA";   // sem consulta: só o texto (REQ-A-16)
+  if (!resp || !(conversa || VEREDITOS.includes(resp.veredito))) { mostrarErro("resposta sem veredito válido."); return; }
   const area = $("resultado");
   limpar(area);
-  area.append(cartaoVeredito(resp, gravadaEm), cartaoAerodromos(resp.avaliacoes || []));
+  if (!conversa) area.append(cartaoVeredito(resp, gravadaEm), cartaoAerodromos(resp.avaliacoes || []));
   if ((resp.janelas || []).length) area.append(cartaoPrevisao(resp.janelas));
   area.append(cartaoExplicacao(resp));
   tracoAtual = { id: resp.id_traco, dados: null };

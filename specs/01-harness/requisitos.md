@@ -143,6 +143,7 @@ TAF (o TAF é repassado como texto e **não** entra no veredito); o loop do agen
   | `pressao_operacional` | mesmo assim, assim mesmo, mesmo com, dá um jeito |
   | `manipulacao_regra` | ignore, desconsidere, esqueça a regra, finja, sem o harness |
   | `previsao_alem_taf` | semana que vem, próxima semana, depois de amanhã, daqui a N dias, mês que vem |
+  | `fora_do_tema` *(13/11)* | integral, derivada, equação, Python/SQL, receita, poema, piada, traduza, redação |
 
 - A comparação DEVE ignorar maiúsculas/minúsculas e acentos.
 - A lista de termos DEVE ficar num único lugar do código (vai para slide e artigo).
@@ -166,6 +167,20 @@ TAF (o TAF é repassado como texto e **não** entra no veredito); o loop do agen
 - O harness DEVE devolver também o registro do bloqueio: regra disparada e trecho da explicação, para o traço.
 - QUANDO o veredito for `RECUSA`, nenhuma explicação do modelo DEVE ser usada; o texto é sempre o texto-modelo
   de recusa com o motivo.
+
+**REQ-H-16 — Trava de conversa sem consulta** (H1) *[revisão de 13/11/2026; ver REQ-A-16]*
+- `verificar_conversa(texto)` DEVE devolver `(regra, trecho)` quando o texto, escrito sem nenhuma ferramenta
+  consultada, trouxer: texto vazio (`conversa_vazia`); código de 4 letras maiúsculas, como `SBGR` ou `KJFK`
+  (`conversa_cita_aerodromo`); grupo de METAR, como `BKN015`, `CAVOK` ou `101200Z` (`conversa_cita_dado`);
+  afirmação favorável ou desfavorável do REQ-H-14, ou frase de ir/não ir, como "pode ir", "não dá pra voar" ou
+  "o tempo está bom" (`conversa_com_veredito`).
+- Também DEVE barrar texto com mais de 500 caracteres (`conversa_longa`) e texto com cara de conta, como `∫`, `√`,
+  `dx` ou "2 + 2 = 4" (`conversa_fora_do_tema`).
+- Caso contrário, DEVE devolver `None`. Definições e mínimos ("VMC significa…", "teto de 1500 ft") passam.
+- `pergunta_no_tema(pergunta)` DEVE devolver `True` só se a pergunta tiver um termo de `TERMOS_DO_TEMA`
+  (aviação/meteorologia, cumprimento ou dúvida sobre o sistema). A lista fica num único lugar do código.
+  Motivo: o llama3.1:8b não classificou o tema de forma estável (13/11/2026: marcou "Oi, tudo bem?" e
+  "O que é um METAR?" como fora do tema numa rodada e acertou na outra).
 
 ## 5. Critérios de aceite obrigatórios (CLAUDE.md)
 

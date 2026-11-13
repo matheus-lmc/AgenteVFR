@@ -16,7 +16,7 @@ AGENTS.md. Marcar só quando a verificação citada passar.
       `traces/demo/`; falta preencher "quem fala"
 - [ ] T3. Grupo marca as linhas de `stpa/stpa.md` (ou a apresentação diz que a revisão está em andamento) — REQ-S-01
       — 12/11/2026: tabela "Revisão do grupo" criada no topo do `stpa.md`; falta o grupo preencher
-- [ ] T4. Rodar `pytest` e anotar o total
+- [x] T4. Rodar `pytest` e anotar o total — 12/11/2026: 443 passando no branch do PR #3 (rodado por matheus-lmc)
 
 ## Para o Artigo (04/12)
 
@@ -32,6 +32,6 @@ AGENTS.md. Marcar só quando a verificação citada passar.
 - [ ] T14. Revisão humana, se D1 = sim (requisitos → design → testes → código) — REQ-R-01 a REQ-R-04
 - [ ] T15. Conferir o item da norma dos mínimos e atualizar código, CLAUDE.md e `analise.md` — REQ-D-03
 - [ ] T16. `docs/artigo_estrutura.md` com o AI Assurance nos quatro pontos — REQ-D-04
-- [ ] T17. CLAUDE.md: ferramentas atuais — REQ-D-05
+- [x] T17. CLAUDE.md: ferramentas atuais — REQ-D-05 — feito junto com a T1 (PR #3)
 - [ ] T18. `specs/README.md`: módulos 06, 07, 08 e matrizes — REQ-D-06
 - [ ] T19. Rodar a avaliação de novo depois de T5–T13 e atualizar `resumo.md` e `analise.md`

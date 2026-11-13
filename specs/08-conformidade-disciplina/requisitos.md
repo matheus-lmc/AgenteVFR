@@ -22,11 +22,11 @@ em `514dc98` (merge do PR #2: avaliação e STPA).
 | `avaliacao/` inexistente | **resolvido em parte**: módulo 06 com 40 METARs rotulados, 24 perguntas em mundo congelado, juiz, CSV, figuras e leitura dos resultados. Ajustes de método na seção 4.2 |
 | `stpa/` inexistente | **resolvido em parte**: módulo 07 com os quatro passos, origem de cada linha (LLM / LLM alt. / grupo) e não mitigados. Falta revisão do grupo, SC e rastreio (seção 4.3) |
 | H7/H8 sem tratamento no AI Assurance | **resolvido** no CLAUDE.md e medido (ICAO exato 6/14 com o v3) |
-| "RAG" na tabela de técnicas | **continua** (CLAUDE.md, linha 37) |
+| "RAG" na tabela de técnicas | **resolvido neste PR** (#3): tabela corrigida no CLAUDE.md (A1) |
 | Sem revisão humana | **continua**, e agora os números mostram o tamanho do problema |
 | Traço sem `parada` e sem id do modelo | **continua** |
 | Item da ICA pendente | **continua**; `analise.md` já afirma "VMC pela ICA 100-1" |
-| `docs/` (roteiro e Artigo) | **continua**, com a apresentação **amanhã (13/11)** |
+| `docs/` (roteiro e Artigo) | roteiro **resolvido neste PR** (#3, A2); estrutura do Artigo **continua** (A14) |
 
 ## 3. O que está de acordo
 
@@ -51,8 +51,8 @@ Formato EARS. Prefixos: `REQ-D` (documentação/entrega), `REQ-E` (ajustes da av
 
 | # | Achado | Prazo | Requisitos |
 |---|---|---|---|
-| A1 | CLAUDE.md lista "RAG/avaliação com outro modelo julgando"; o sistema não tem RAG | **13/11** | REQ-D-01 |
-| A2 | Não há `docs/roteiro_apresentacao.md` nem slides no repositório | **13/11** | REQ-D-02 |
+| A1 | CLAUDE.md lista "RAG/avaliação com outro modelo julgando"; o sistema não tem RAG | **resolvido** (PR #3) | REQ-D-01 |
+| A2 | Não há `docs/roteiro_apresentacao.md` nem slides no repositório | roteiro **resolvido** (PR #3); slides: **13/11** | REQ-D-02 |
 | A3 | `stpa/stpa.md` diz "Falta a revisão do grupo" | **13/11** | REQ-S-01 |
 | A4 | O juiz não recebe a pergunta nem o nome da estação; por isso deu 5 ao P13 (respondeu "Guarulhos pra Congonhas" com dado de Campinas). A12 pede o traço inteiro | 04/12 | REQ-E-01 |
 | A5 | Rubrica 1–5 somando três critérios; A12 pede passa/falha por critério | 04/12 | REQ-E-02 |
@@ -65,11 +65,11 @@ Formato EARS. Prefixos: `REQ-D` (documentação/entrega), `REQ-E` (ajustes da av
 | A12 | Traço, avaliação e STPA registram só a tag `llama3.1:8b`; EX pede "nome e versão, ou o id" | 04/12 | REQ-T-02 |
 | A13 | Item da ICA não conferido, mas já usado como argumento ("MVFR para a API e VMC pela ICA 100-1") | 04/12 | REQ-D-03 |
 | A14 | Não há `docs/artigo_estrutura.md` com o AI Assurance nos quatro pontos do EX | 04/12 | REQ-D-04 |
-| A15 | CLAUDE.md descreve `buscar_taf` como ferramenta do modelo; desde o v3 ela não é exposta | 04/12 | REQ-D-05 |
+| A15 | CLAUDE.md descreve `buscar_taf` como ferramenta do modelo; desde o v3 ela não é exposta | **resolvido** (PR #3) | REQ-D-05 |
 | A16 | `specs/README.md` não lista os módulos 06 e 07 nem a matriz deles | 04/12 | REQ-D-06 |
 
-**Não verificado nesta revisão:** `pytest` não foi executado (a máquina da revisão não tem Python). Os números de
-testes vêm do `specs/README.md` e do `stpa.md` ("443 testes").
+**Testes:** `pytest` com **443 passando**, rodado no branch do PR #3 em 12/11/2026 (conferido por matheus-lmc na
+revisão do PR; a máquina desta revisão não tem Python).
 
 ### 4.1 Documentação e entrega
 
@@ -181,7 +181,7 @@ ENTÃO os campos ficam `null` e a execução segue. *Verificação:* teste com `
 | D2 | Meta de concordância juiz × humano | ≥ 80 % por critério | κ de Cohen ≥ 0,6 | Define se o juiz entra como métrica ou como limite |
 | D3 | Como variar as k tentativas | Trocar a semente; temperatura fica 0,1 | Temperatura 0,7 | Mede a variação sem mudar o comportamento da demo |
 | D4 | RAG no projeto? | **Não** | RAG sobre a norma de mínimos | Não: só corrigir a tabela. Sim: módulo novo, não cabe antes de 13/11 |
-| D5 | O que fazer antes de amanhã | Só REQ-D-01, REQ-D-02 e REQ-S-01 | — | O resto fica para o Artigo (04/12) |
+| D5 | O que fazer antes de amanhã | Só REQ-D-01, REQ-D-02 e REQ-S-01 | — | O resto fica para o Artigo (04/12). *Revisão do PR #3 (matheus-lmc, 12/11/2026):* de acordo; a D1, se aprovada, também fica para o Artigo (funcionalidade nova, com interface e testes) |
 
 ## 6. Fora desta spec
 

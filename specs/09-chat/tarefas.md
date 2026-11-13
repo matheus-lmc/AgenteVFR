@@ -1,8 +1,5 @@
 # Interface em chat — plano de implementação
 
-> **Para agentes:** use superpowers:executing-plans (ou subagent-driven-development) tarefa por tarefa. Passos em
-> checkbox (`- [ ]`).
-
 **Objetivo:** trocar a página de formulário por um chat no estilo iMessage. Os status reais saem do traço depois
 da resposta. A página antiga fica preservada em `/classico`.
 
@@ -12,6 +9,8 @@ serve a cópia intacta da página atual. O JS continua montando tudo com `el()`/
 **Stack:** FastAPI (rota), HTML/CSS/JS sem dependências, pytest.
 
 **Spec:** `specs/09-chat/design.md` (aprovada em 12/11/2026).
+
+**Estado:** concluído em 12/11/2026 (tarefas 1–3 verificadas: `pytest` 444 passando, navegador com o Compose); PR #4.
 
 ## Restrições globais
 
@@ -45,14 +44,14 @@ serve a cópia intacta da página atual. O JS continua montando tudo com `el()`/
 - Modificar: `app/main.py` (constante `CLASSICO` ao lado de `INDEX`, mais a rota)
 - Teste: `tests/test_main.py`
 
-- [ ] `git switch -c chat-ui` e `cp app/static/index.html app/static/classico.html`
-- [ ] Teste `test_classico_serve_a_pagina_antiga(tmp_path)`: `c.get("/classico")` dá 200, `text/html` e contém
+- [x] `git switch -c chat-ui` e `cp app/static/index.html app/static/classico.html`
+- [x] Teste `test_classico_serve_a_pagina_antiga(tmp_path)`: `c.get("/classico")` dá 200, `text/html` e contém
       `prompts.AVISO` e `id="lista-demo"`. Estender os dois testes REQ-I-11/16 para os dois arquivos
       (`for arq in (INDEX, CLASSICO)`).
-- [ ] Rodar `pytest tests/test_main.py -q`: o teste novo falha com 404.
-- [ ] Rota `@app.get("/classico", include_in_schema=False)` → `FileResponse(CLASSICO, media_type="text/html")`.
-- [ ] Rodar `pytest -q`: tudo passa.
-- [ ] Commit "Reserva da interface atual em /classico".
+- [x] Rodar `pytest tests/test_main.py -q`: o teste novo falha com 404.
+- [x] Rota `@app.get("/classico", include_in_schema=False)` → `FileResponse(CLASSICO, media_type="text/html")`.
+- [x] Rodar `pytest -q`: tudo passa.
+- [x] Commit "Reserva da interface atual em /classico".
 
 ### Task 2: página em chat
 
@@ -74,7 +73,7 @@ serve a cópia intacta da página atual. O JS continua montando tudo com `el()`/
   - `modelo` com `tool_calls` → `Modelo pediu ${nome}(${icao})`
   - `ferramenta` → `Buscou ${nome} de ${icao}: ${status}`
   - `harness` → `Harness: ${icao} ${veredito}` (+ ` (${codigo_recusa})`)
-  - `verificador` → `Verificador: explicação aprovada` / `Verificador bloqueou a explicação (${regra})`
+  - `verificador` → `Verificador: sem contradição com o veredito (não confere valores)` / `Verificador bloqueou a explicação (${regra})`
   - `erro` → `Erro: ${regra}`
 
   Sem `dados` → uma linha por `resp.avaliacoes`: `Harness: ${icao} ${veredito}`. Os bloqueios e os erros saem com
@@ -92,18 +91,18 @@ serve a cópia intacta da página atual. O JS continua montando tudo com `el()`/
 - Ao clicar num chip: envia na hora. Depois da primeira pergunta, `#sugestoes` some, e um botão "Sugestões" na
   barra volta a mostrá-las.
 
-- [ ] Reescrever a página conforme acima.
-- [ ] `pytest -q`: tudo passa (REQ-I-01, 11 e 16 continuam valendo para o novo `index.html`).
-- [ ] Commit "Interface em chat (spec 09)".
+- [x] Reescrever a página conforme acima.
+- [x] `pytest -q`: tudo passa (REQ-I-01, 11 e 16 continuam valendo para o novo `index.html`).
+- [x] Commit "Interface em chat (spec 09)".
 
 ### Task 3: verificação no navegador (Compose rodando)
 
-- [ ] `docker compose up -d --build app` e abrir `http://127.0.0.1:8000`.
-- [ ] Ao vivo: "Dá pra ir VFR em Congonhas agora?" → pontinhos com segundos, linhas de status do traço real e
+- [x] `docker compose up -d --build app` e abrir `http://127.0.0.1:8000`.
+- [x] Ao vivo: "Dá pra ir VFR em Congonhas agora?" → pontinhos com segundos, linhas de status do traço real e
       balão com o veredito do código e os aeródromos visíveis.
-- [ ] Recusa: "Posso decolar de Congonhas mesmo assim?" → uma linha do pré-filtro e o balão RECUSA.
-- [ ] Gravadas: abrir uma com bloqueio (se houver) e uma janela TAF. Conferir o antes × depois e a faixa por hora
+- [x] Recusa: "Posso decolar de Congonhas mesmo assim?" → uma linha do pré-filtro e o balão RECUSA.
+- [x] Gravadas: abrir uma com bloqueio (se houver) e uma janela TAF. Conferir o antes × depois e a faixa por hora
       dentro do balão.
-- [ ] Duas perguntas seguidas: o "Ver traço" de cada balão mostra o seu próprio id.
-- [ ] Tema escuro, largura de 375 px sem rolagem horizontal, e `/classico` abrindo a página antiga.
-- [ ] Console sem erros. Corrigir o que aparecer, `pytest -q`, commit e perguntar ao usuário sobre o PR/merge.
+- [x] Duas perguntas seguidas: o "Ver traço" de cada balão mostra o seu próprio id.
+- [x] Tema escuro, largura de 375 px sem rolagem horizontal, e `/classico` abrindo a página antiga.
+- [x] Console sem erros. Corrigir o que aparecer, `pytest -q`, commit e perguntar ao usuário sobre o PR/merge.

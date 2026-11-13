@@ -1,5 +1,8 @@
 # 04 — Interface e Docker: design
 
+> **Nota (13/11/2026):** desde a spec 09 (interface em chat), DD1, DD5, DD7, DD9, DD16 e DD17 valem para a página
+> anterior, servida em `/classico`. A página principal segue `specs/09-chat/design.md`.
+
 **Estado:** aprovado em 10/11/2026 (variações visuais em escolha, seção 8) · **Requisitos:** [requisitos.md](requisitos.md) (aprovado)
 
 Direção visual pesquisada com a skill **UI UX Pro Max** (`.claude/skills/ui-ux-pro-max`, consulta

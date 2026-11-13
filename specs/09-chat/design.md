@@ -30,7 +30,7 @@ o campo embaixo, a conversa em cima, o AgenteVFR respondendo em balões com avat
   - `modelo` com `tool_calls` → "Modelo pediu buscar_metar(SBSP)"
   - `ferramenta` → "Buscou o METAR de SBSP (idade N min)" / "sem dado"
   - `harness` → "Harness: SBSP VMC" / "recusou (<código>)"
-  - `verificador` → "Verificador: explicação aprovada" / "**bloqueou** a explicação" (em destaque)
+  - `verificador` → "Verificador: sem contradição com o veredito (não confere valores)" / "**bloqueou** a explicação" (em destaque)
   Se o traço não abrir, as linhas saem de `resp.avaliacoes` (menos detalhe, mas nada inventado).
 - **Balão da resposta:** dentro dele, nesta ordem, o conteúdo que já existe hoje, compactado:
   1. cartão do veredito VMC/IMC/RECUSA (cor + ícone + motivo; teto e visibilidade com os mínimos);
@@ -56,6 +56,9 @@ continuam passando.
 
 Exceção: a página de chat abandona o contador visível de caracteres do REQ-I-07
 (`specs/04-interface/requisitos.md`). O `maxlength=500` continua; o contador segue em `/classico`.
+Também saem da página de chat o **logo do grupo** (DD17 da spec 04) e o **fundo decorativo** (DD16): o cabeçalho
+passa a ter o avatar do piloto. Os dois continuam em `/classico`. **Pendente:** o grupo confirmar que quer o logo
+fora da tela principal (o logo foi pedido em 10/11; o avatar, em 12/11).
 
 ## Reserva para a demo (escolha do Claude)
 

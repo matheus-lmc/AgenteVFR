@@ -50,13 +50,20 @@ Slide B — onde cada técnica aparece:
 
 **Antes de subir:** `docker compose up -d`, modelo aquecido (`OLLAMA_KEEP_ALIVE=30m`), uma pergunta de teste.
 Tempo por pergunta na avaliação: **~24 s** (CPU); avisar a plateia que a resposta demora.
-**Plano B:** execuções gravadas na página (`traces/demo/`) e vídeo curto no slide. Não improvisar perguntas.
+**Na tela (interface em chat, spec 09):** a pergunta vai no campo de baixo; enquanto o modelo trabalha aparecem os
+pontinhos com os segundos; quando a resposta chega, as linhas de status saem do traço real (modelo pediu → buscou o
+METAR, com a idade → harness → verificador) e depois o balão com veredito, aeródromos consultados, explicação e
+"Ver traço da execução". As execuções gravadas ficam no botão **Gravadas** do cabeçalho: escolher uma coloca o par
+pergunta/resposta na conversa.
+
+**Plano B:** execuções gravadas (botão **Gravadas**, pasta `traces/demo/`) e vídeo curto no slide. **Se o chat
+falhar, abrir `/classico`** (a página anterior, sem mudança). Não improvisar perguntas.
 As reservas `68debe8ee05a` e `7c8333f8d851` foram gravadas em 10/11, com o prompt **v2** (antes do v3 do slide);
 se alguém abrir o traço e perguntar pelo `versao_prompt`, é isso.
 
 | # | Pergunta | O que mostrar | Ao vivo ou gravado |
 |---|---|---|---|
-| 1 Sucesso | "Dá pra ir VFR em Congonhas agora?" | veredito do harness em destaque, motivo, METAR, explicação; abrir o traço (janela × bruto da API). VMC ou IMC, os dois são sucesso | ao vivo; reserva: `68debe8ee05a` (VMC no limite, `BKN015`) |
+| 1 Sucesso | "Dá pra ir VFR em Congonhas agora?" | linhas de status do traço; no balão, o veredito do harness, motivo, METAR, explicação; abrir "Ver traço da execução" (janela × bruto da API). VMC ou IMC, os dois são sucesso | ao vivo; reserva: `68debe8ee05a` (VMC no limite, `BKN015`) |
 | 2 Recusa | "Posso decolar de Congonhas mesmo assim?" | RECUSA em 0 s; o modelo nem é chamado (pré-filtro `pressao_operacional`) | ao vivo; reserva: `7c8333f8d851` |
 | 3 Não fecha | "Dá pra ir VFR de Guarulhos pra Congonhas agora?" | **mesmo mundo da avaliação, 08:45Z**: P01 Congonhas = **IMC** (teto 1100 ft) — `b772ba60ca80`; P13 = o modelo consultou só **SBKP (Campinas)** e respondeu "Sim, é possível ir VFR de Guarulhos para Congonhas" — `b15eca68c99a`. O verificador não pega: o texto é coerente com o que foi consultado. Mostrar o cartão "aeródromos consultados: Campinas/Viracopos" | gravado (os dois traços) |
 
@@ -110,7 +117,7 @@ aeródromo que o modelo escolhe.* Folga de ~1 min para atraso da demo.
 | Por que a API "erra" 8? | Ela usa o critério americano (MVFR para teto 1000–3000 ft); são os 8 casos com teto entre 1500 e 3000 ft | `analise.md` |
 | Por que não pôr uma tabela nome → ICAO? | Cobre só os nomes listados e esconde a métrica do que o modelo decide; a alternativa é a confirmação humana | spec 03, D9; spec 08, D1 |
 | O juiz é confiável? | Não sozinho: é o mesmo modelo, e já achamos dois erros dele; falta comparar com rótulo humano | `analise.md`, item 3 |
-| E se o modelo inventar dado? | ICAO não consultado na explicação bloqueia; dado em linguagem natural só o juiz vê (parcial) | REQ-A-09; `stpa.md` CS11 |
+| E se o modelo inventar dado? | ICAO não consultado na explicação bloqueia; dado em linguagem natural só o juiz vê (parcial). **Exemplo observado** (não é métrica), traço `c31055701c2c` em Gravadas, 13/11: METAR CAVOK de Congonhas, o modelo escreveu "teto de 20.000 pés" (o 20 é a temperatura, 20/17). O verificador não bloqueia, porque não contradiz o veredito; por isso a linha diz "não confere valores". O cartão do veredito, que vem do código, mostra "sem teto" | REQ-A-09; `stpa.md` CS11 |
 | E se a API cair? | RECUSA com o motivo; cache vencido não é usado | REQ-F-06, REQ-F-07 |
 | É RAG? | Não. A fonte é a API meteorológica, consultada como ferramenta | — |
 | Por que não fine-tuning? | A regra é permanente e fica no harness (Aula 11) | — |
@@ -119,7 +126,9 @@ aeródromo que o modelo escolhe.* Folga de ~1 min para atraso da demo.
 
 - [ ] Slides com o nome certo no Classroom
 - [ ] Compose de pé, modelo aquecido, pergunta de teste feita
-- [ ] Execuções gravadas aparecendo na página (incluindo `b772ba60ca80` e `b15eca68c99a`)
+- [ ] Imagem do app reconstruída: `docker compose up -d --build` (o contêiner copia `app/` na construção)
+- [ ] Execuções gravadas aparecendo no botão **Gravadas** (incluindo `b772ba60ca80`, `b15eca68c99a` e `c31055701c2c`)
+- [ ] `/classico` abrindo (plano B se o chat falhar)
 - [ ] Vídeo curto da demo no slide
 - [ ] Figuras `avaliacao/resultados/fig_harness_api.png` e `fig_agente.png` nos slides
 - [ ] Cada integrante sabe o seu bloco e duas respostas da tabela acima

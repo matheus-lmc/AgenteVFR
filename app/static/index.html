@@ -415,7 +415,7 @@ function linhasStatus(dados, resp) {
           else linhas.push(`Harness: ${p.icao} ${p.veredito}`);
           break;
         case "verificador":
-          if (p.passou === true) linhas.push("Verificador: explicação aprovada");
+          if (p.passou === true) linhas.push("Verificador: sem contradição com o veredito (não confere valores)");
           else if (p.passou === false) linhas.push(`Verificador bloqueou a explicação (${p.regra})`);
           break;   // passou === null: recusa, explicação descartada — sem linha
         case "erro":

@@ -26,7 +26,7 @@ Direção visual pesquisada com a skill **UI UX Pro Max** (`.claude/skills/ui-ux
 | DD14 | **Espera: cartão no lugar do resultado** (escolha 5B) com "Consultando… N s" e uma frase explicando o que está acontecendo; botão desabilitado | escolha visual | contador só no botão (5A) |
 | DD15 | **Versões**: `fastapi==0.162.0` (23/10), `uvicorn==0.54.0` (25/09), `pydantic==2.14.1` (11/10), imagem `python:3.12.15-slim` | regra das 2 semanas | versões mais novas (menos de 2 semanas) |
 | DD16 | **Fundo decorativo único**: um SVG de traço fino (uma nuvem e um avião cruzando), fixo no canto inferior direito, 11–12 % de opacidade, `aria-hidden`, sem interação, escondido com `prefers-contrast: more`. A carta sinótica da primeira versão foi tirada (poluía) | pedido do grupo, 10/11/2026 | rosa dos ventos com avião; carta sinótica |
-| DD17 | **Logo do grupo no cabeçalho** (`logo_com_fundo.jpeg` → PNG de fundo transparente, ~70 KB, embutido na página como `data:`; segue valendo REQ-I-16). Feita para o escuro; no tema claro a página inverte a luminosidade mantendo o matiz (`filter: invert(1) hue-rotate(180deg)`). Fica dentro do `<h1>` com `alt` "AgenteVFR — meteorologia de aviação" | pedido do grupo, 10/11/2026 | texto "AgenteVFR"; faixa escura só para a logo |
+| DD17 | **Logo do grupo no cabeçalho** (`docs/imagens/logo_com_fundo.jpeg` → PNG de fundo transparente, ~70 KB, embutido na página como `data:`; segue valendo REQ-I-16). Feita para o escuro; no tema claro a página inverte a luminosidade mantendo o matiz (`filter: invert(1) hue-rotate(180deg)`). Fica dentro do `<h1>` com `alt` "AgenteVFR — meteorologia de aviação" | pedido do grupo, 10/11/2026 | texto "AgenteVFR"; faixa escura só para a logo |
 
 ## 2. Arquivos
 

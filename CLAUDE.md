@@ -31,10 +31,14 @@ Leia inteiro antes de começar.
 |---|---|
 | Prompt Engineering | prompt de sistema do agente (vai num slide) |
 | Context Engineering | o que entra na janela a cada passo: só dados compactos e o veredito, nunca o JSON bruto da API |
-| Agente com ferramenta | `buscar_metar` (já devolve o veredito do harness) e `buscar_taf` (informativo) via tool calling do Ollama; `avaliar_janela` no módulo 05 |
-| Harness | regra VMC/IMC em código, checagem de idade do dado, escopo, verificador de contradição |
-| Análise de perigos assistida por LLM (STPA) | pasta `stpa/` |
-| RAG/avaliação com outro modelo julgando | modelo juiz com rubrica avaliando a fidelidade das explicações (`avaliacao/`) |
+| Agente com ferramenta | `buscar_metar` (já devolve o veredito do harness) e `avaliar_janela` (TAF, módulo 05) via tool calling do Ollama; `buscar_taf` só é chamada por dentro de `avaliar_janela` |
+| Harness | regra VMC/IMC em código, checagem de idade do dado, escopo, lista de ferramentas permitidas, limite de 5 chamadas, ramo de erro, verificador de contradição |
+| AGENTS.md | `AGENTS.md` na raiz: padrões e invariantes de segurança para agentes de código que trabalham no repositório |
+| Análise de perigos assistida por LLM (STPA) | pasta `stpa/` (módulo 07) |
+| Evals: gabarito do grupo, grader de código e juiz LLM | `avaliacao/` (módulo 06): harness × 40 METARs rotulados, acerto de ICAO, recusas, juiz avaliando a fidelidade das explicações |
+
+O projeto **não usa RAG** (não há corpus, recuperação nem citação de trecho); não apresentar como RAG
+(`specs/08-conformidade-disciplina/requisitos.md`, D4).
 
 ## O sistema
 

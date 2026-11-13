@@ -8,6 +8,20 @@ revisão do grupo** (marcar ✔ ou corrigir cada linha). · **Plano:** `specs/07
 com alteração (o que mudou está na linha) · **grupo** = acrescentada na revisão. O que foi descartado da saída do
 Llama está na seção 6, com o motivo.
 
+## Revisão do grupo (REQ-S-01, spec 08)
+
+A Aula 10 cobra que uma pessoa aceite o rascunho do LLM. Preencher antes de apresentar o STPA como revisado;
+enquanto não estiver completo, a apresentação diz "revisão do grupo em andamento".
+
+| Seção | Revisada por (iniciais) | Data | Correções feitas |
+|---|---|---|---|
+| 1. Perdas | | | |
+| 2. Perigos | | | |
+| 3. Estrutura de controle | | | |
+| 4. UCAs | | | |
+| 5. Cenários e mitigação | | | |
+| 7. Não mitigados | | | |
+
 ## 0. Resumo: o que o Llama fez bem e mal
 
 | Passo | O Llama escreveu | Aproveitado | Problema principal |

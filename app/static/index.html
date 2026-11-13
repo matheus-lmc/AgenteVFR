@@ -18,7 +18,7 @@ try { if (localStorage.getItem("tema") === "escuro") document.documentElement.da
   :root {
     color-scheme: light;
     --fundo: #F4F6F9; --fundo-topo: #E6F0FA; --cartao: #FFFFFF; --campo: #EEF1F5; --texto: #1D1D1F; --texto-apagado: #5F6672;
-    --borda: #8590A1; --borda-suave: rgba(15, 23, 42, .09); --sombra: 0 1px 2px rgba(15, 23, 42, .05), 0 8px 24px rgba(15, 23, 42, .06);
+    --borda: #76808F; --borda-suave: rgba(15, 23, 42, .09); --sombra: 0 1px 2px rgba(15, 23, 42, .05), 0 8px 24px rgba(15, 23, 42, .06);
     --primario: #0071E3; --primario-hover: #0062C4; --primario-texto: #FFFFFF; --foco: #0062C4;
     --vmc: #15803D; --imc: #B91C1C; --recusa: #4B5563;
     --aviso-fundo: rgba(255, 255, 255, .72); --aviso-icone: #D97706;
@@ -38,13 +38,14 @@ try { if (localStorage.getItem("tema") === "escuro") document.documentElement.da
     --bloqueio-fundo: #3A2B05; --bloqueio-texto: #FDE68A; --bloqueio-borda: #7A5A12;
     --erro-fundo: #3B1212; --erro-texto: #FECACA; --marca: #7A5A12;
     --fundo-traco: #8EC5FF; --fundo-traco-opacidade: .12;
+    --faixa-imc: #EF4444; --faixa-recusa: #7D8797;   /* só a faixa lateral dos cartões: as cores do selo ficam baixas demais sobre --campo */
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   body { margin: 0; background: var(--fundo) linear-gradient(180deg, var(--fundo-topo), var(--fundo) 420px) no-repeat; color: var(--texto);
          font: 16px/1.5 var(--fonte); -webkit-font-smoothing: antialiased; min-height: 100vh; }
   h1, h2, h3 { line-height: 1.2; margin: 0; }
-  h1 { font-size: 2rem; font-weight: 700; letter-spacing: -.03em; line-height: 1.1; }   /* texto grande: tracking negativo */
+  h1 { font-size: 2rem; font-weight: 700; letter-spacing: -.03em; line-height: 0; }   /* texto grande: tracking negativo; line-height 0 porque o h1 só contém a logo */
   h2 { font-size: 1.1875rem; font-weight: 650; letter-spacing: -.012em; }
   button, input { font: inherit; letter-spacing: inherit; }
   :focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
@@ -70,7 +71,6 @@ try { if (localStorage.getItem("tema") === "escuro") document.documentElement.da
   .cabecalho { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 16px; margin: 16px 0 24px; }
   .cabecalho p { margin: 6px 0 0; max-width: 46ch; }
   /* Logo: PNG com fundo transparente, prateado (feito para o escuro). No tema claro, inverte a luminosidade e mantém o matiz. */
-  h1 { line-height: 0; }
   .logo { display: block; height: 104px; width: auto; max-width: 100%; filter: invert(1) hue-rotate(180deg); }
   :root[data-tema="escuro"] .logo { filter: none; }
   .cabecalho-acoes { display: flex; align-items: center; gap: 8px; }
@@ -96,12 +96,12 @@ try { if (localStorage.getItem("tema") === "escuro") document.documentElement.da
   .botao:disabled, .exemplo:disabled { opacity: .55; cursor: not-allowed; }
   .exemplos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 16px; }
   .exemplos-rotulo { flex: 0 0 100%; font-size: .75rem; font-weight: 600; letter-spacing: .02em; color: var(--texto-apagado); margin-bottom: -2px; }
-  .exemplo { min-height: 34px; padding: 4px 12px; border: 1px solid var(--borda-suave); border-radius: 6px; background: var(--campo); color: var(--texto); cursor: pointer; text-align: left; font-size: .8125rem; line-height: 1.35; }
+  .exemplo { min-height: 34px; padding: 4px 12px; border: 1px solid var(--borda); border-radius: 6px; background: var(--campo); color: var(--texto); cursor: pointer; text-align: left; font-size: .8125rem; line-height: 1.35; }
   .exemplo:hover:not(:disabled) { border-color: var(--primario); }
   .botao:active:not(:disabled), .exemplo:active:not(:disabled) { transform: scale(.97); }  /* resposta ao toque, na hora */
 
   /* 5B — cartão de espera */
-  .espera { box-shadow: inset 0 0 0 1px var(--borda), var(--sombra); background-image: none; }
+  .espera { box-shadow: inset 0 0 0 1px var(--borda), var(--sombra); }
 
   /* 1C — selo grande + números contra o mínimo */
   .veredito { display: flex; flex-wrap: wrap; align-items: stretch; gap: 20px; }
@@ -116,8 +116,8 @@ try { if (localStorage.getItem("tema") === "escuro") document.documentElement.da
   .selo { display: inline-flex; align-items: center; gap: 4px; color: #fff; font-weight: 600; font-size: .8125rem; border-radius: 6px; padding: 2px 8px; }
 
   /* 2B — um cartão por aeródromo */
-  .aerodromo { background: var(--campo); border-radius: 8px; padding: 12px 16px; margin-top: 8px; box-shadow: inset 4px 0 0 var(--recusa); }
-  .aerodromo.b-VMC { box-shadow: inset 4px 0 0 var(--vmc); } .aerodromo.b-IMC { box-shadow: inset 4px 0 0 var(--imc); } .aerodromo.b-RECUSA { box-shadow: inset 4px 0 0 var(--recusa); }
+  .aerodromo { background: var(--campo); border-radius: 8px; padding: 12px 16px; margin-top: 8px; box-shadow: inset 4px 0 0 var(--faixa-recusa, var(--recusa)); }
+  .aerodromo.b-VMC { box-shadow: inset 4px 0 0 var(--vmc); } .aerodromo.b-IMC { box-shadow: inset 4px 0 0 var(--faixa-imc, var(--imc)); } .aerodromo.b-RECUSA { box-shadow: inset 4px 0 0 var(--faixa-recusa, var(--recusa)); }
   .aerodromo-nome { font-size: 1.0625rem; font-weight: 650; letter-spacing: -.01em; }
   .metar { font-family: var(--mono); font-size: .8125rem; color: var(--texto-apagado); overflow-wrap: anywhere; margin-top: 4px; }
 
@@ -201,7 +201,7 @@ try { if (localStorage.getItem("tema") === "escuro") document.documentElement.da
     </div>
     <div class="cabecalho-acoes">
       <span id="saude" class="saude" role="status">Verificando o modelo…</span>
-      <button id="tema" class="tema" type="button" aria-label="Alternar tema claro e escuro" aria-pressed="false">
+      <button id="tema" class="tema" type="button" aria-label="Tema escuro" aria-pressed="false">
         <svg class="sol" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
         <svg class="lua" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="M16 14v6M8 14v6M12 16v6"/></svg>
       </button>

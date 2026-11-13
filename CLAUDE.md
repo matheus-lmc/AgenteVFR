@@ -23,7 +23,7 @@ Leia inteiro antes de começar.
   5. o limite que o artigo vai escrever na seção de **AI Assurance**.
 - Demo ao vivo é bem-vinda; se a rede falhar, o grupo segue com captura/vídeo curto já no slide. Não improvisar outro sistema.
 - Slides em PDF ou PPTX, nome: `TE251_2026-2_Exame_AgenteVFR_slides.pdf` (ou `.pptx`).
-- Data assumida da apresentação: **26/11/2026** (confirmar com o grupo).
+- Data da apresentação: **13/11/2026** (confirmada em 10/11/2026).
 
 ### Técnicas da disciplina usadas neste projeto
 
@@ -232,6 +232,9 @@ Guardar os prompts usados em `prompts_stpa.md` e marcar o que o grupo alterou na
 - Dependência da disponibilidade e da atualização da API.
 - Verificador de contradição baseado em regras pode deixar passar paráfrases.
 - Juiz é o mesmo modelo; conjunto de avaliação pequeno.
+- O modelo pode mapear o nome para o aeródromo errado (H7: "Guarulhos" → SBKP/Campinas, reprodutível com o
+  llama3.1:8b) e omitir aeródromos da pergunta (H8). O sistema só torna isso visível (nome da estação na
+  resposta); não bloqueia.
 - Janela pelo TAF é previsão, não observação; a regra de pior caso pode ser conservadora demais
   (marca IMC um período em que o TEMPO tem 30% de chance).
 
@@ -250,7 +253,6 @@ Guardar os prompts usados em `prompts_stpa.md` e marcar o que o grupo alterou na
 
 ## Pendências
 
-- Confirmar a data da apresentação (12/11 ou 26/11).
 - Confirmar o item exato da ICA 100-1/ICA 100-12 para citar.
 - Confirmar o endpoint do TAF e os campos do JSON no schema da API.
 - Lista de integrantes (autores no artigo e na apresentação).

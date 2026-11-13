@@ -1,0 +1,4 @@
+Passo 1 — Perdas e perigos: 66 s, 998 + 331 tokens
+Passo 2 — Estrutura de controle: 47 s, 1492 + 476 tokens
+Passo 3 — Ações de controle inseguras (UCAs): 86 s, 2145 + 790 tokens
+Passo 4 — Cenários causais: 108 s, 3098 + 823 tokens

@@ -406,12 +406,16 @@ function linhasStatus(dados, resp) {
         }
         case "ferramenta": {
           const icao = p.argumentos && typeof p.argumentos === "object" ? (p.argumentos.icao || "") : "";
-          const status = (p.resultado && p.resultado.status) || (p.janela && p.janela.erro) || "?";
-          linhas.push(`Buscou ${p.nome} de ${icao}: ${status}`);
+          const dado = { buscar_metar: "o METAR", avaliar_janela: "o TAF" }[p.nome] || p.nome;
+          const ok = p.resultado && p.resultado.status === "ok";
+          const idade = p.janela ? p.janela.idade_min : null;
+          if (ok && idade !== null && idade !== undefined) linhas.push(`Buscou ${dado} de ${icao} (idade ${idade} min)`);
+          else if (ok) linhas.push(`Buscou ${dado} de ${icao}`);
+          else linhas.push(`Buscou ${dado} de ${icao}: sem dado`);
           break;
         }
         case "harness":
-          linhas.push(`Harness: ${p.icao} ${p.veredito}` + (p.codigo_recusa ? ` (${p.codigo_recusa})` : ""));
+          linhas.push(p.codigo_recusa ? `Harness: ${p.icao} recusou (${p.codigo_recusa})` : `Harness: ${p.icao} ${p.veredito}`);
           break;
         case "verificador":
           if (p.passou === true) linhas.push("Verificador: explicação aprovada");

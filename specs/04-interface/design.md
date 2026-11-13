@@ -10,21 +10,23 @@ Direção visual pesquisada com a skill **UI UX Pro Max** (`.claude/skills/ui-ux
 
 | ID | Decisão | Origem | Alternativa descartada |
 |---|---|---|---|
-| DD1 | **Estilo "Minimalism & Swiss"**: limpo, grade, alto contraste, sem enfeite | skill (indicado para ferramentas profissionais/dashboards) | — |
+| DD1 | **Estilo "Apple" discreto** (revisão de 10/11/2026): tipografia SF/`-apple-system`, cartões agrupados com cantos de 10 px (8 px em campos, botões e chips) e sombra suave no lugar de bordas, material translúcido na faixa de aviso; sem enfeite além do fundo (DD16) | skills `apple-design` e `emil-design-eng` | "Minimalism & Swiss" original (grade, bordas, alto contraste) |
 | DD2 | **Não usar o padrão "Hero-Centric"** sugerido pela skill | ajuste nosso | hero de landing page: a página é ferramenta, não vitrine |
 | DD3 | **Paleta**: base da skill (azul-céu + âmbar) + cores semânticas do veredito, todas conferidas no contraste (seção 4) | skill + cálculo WCAG | primário da skill `#0284C7` atrás de texto branco (4,10:1, reprovado) |
 | DD4 | **Tipografia do sistema** (`system-ui` no texto; `ui-monospace` em METAR, ICAO e traço) | D2 (sem recurso externo) | Fira Sans/Fira Code do Google Fonts, sugeridas pela skill |
-| DD5 | **Só tema claro** | projetor da sala | modo escuro automático (`prefers-color-scheme`) |
+| DD5 | **Tema claro por padrão; escuro opcional** (botão no cabeçalho, lembrado no navegador; não segue o `prefers-color-scheme`, para o projetor da sala sempre abrir claro). Contrastes do escuro conferidos (≥ 4,5:1 no texto) | escolha do grupo, 10/11/2026 | só tema claro; escuro automático |
 | DD6 | **Ícones SVG embutidos** + texto ao lado (✓ VMC, ⨯ IMC, ⊘ RECUSA desenhados em SVG, nunca emoji) | skill (sem emoji; cor não é o único sinal) | só cor |
-| DD7 | **Sem animação de rolagem nem GSAP**; só transições CSS de 150–200 ms, desligadas com `prefers-reduced-motion` | skill (motion 2) + D2 | "scroll reveal" com GSAP sugerido pela skill |
+| DD7 | **Movimento curto e discreto**: pressão do botão `scale(.97)` em 120 ms, entrada do resultado em 220 ms (`opacity` + `translateY(8px)`, `cubic-bezier(0.23,1,0.32,1)`), só `transform`/`opacity`/cores; nada em ação de teclado; tudo desligado com `prefers-reduced-motion`; `prefers-reduced-transparency` e `prefers-contrast: more` tratados | skills + REQ-I-15 | scroll reveal/GSAP |
 | DD8 | **Coluna única, até 880 px**, nesta ordem: aviso → pergunta → veredito → aeródromos consultados → explicação → traço → execuções gravadas | nosso (leitura de cima para baixo na apresentação) | duas colunas |
-| DD9 | **Aviso fixo como faixa âmbar no topo, presa ao rolar** | REQ-I-14 | rodapé (some ao rolar) |
+| DD9 | **Aviso fixo como faixa translúcida (blur) no topo, presa ao rolar**; sólida com `prefers-reduced-transparency` | REQ-I-14 | rodapé (some ao rolar); faixa âmbar chapada (versão anterior) |
 | DD10 | **Painéis recolhíveis com `<details>`/`<summary>` nativos** (teclado e leitor de tela de graça) | skill (acessibilidade) | componente próprio em JS |
 | DD11 | **Veredito: selo grande + números lado a lado** (escolha 1C): selo colorido com ícone e palavra; ao lado, teto e visibilidade contra o mínimo; o cartão é a região `aria-live` | REQ-I-08, escolha visual | cartão inteiro colorido (1A); cartão branco com faixa (1B) |
 | DD12 | **Aeródromos consultados: um cartão por aeródromo, nome da estação em destaque** (escolha 2B), com faixa lateral na cor do veredito, ICAO ao lado do nome, teto, visibilidade e METAR; título "confira se é o que você pediu" | H7/H8, escolha visual | tabela (2A) |
 | DD13 | **Bloqueio: antes × depois** (escolha 3B): alerta âmbar com a regra; o texto que o modelo escreveu aparece riscado, com o trecho marcado; abaixo, o texto gerado pelo sistema | REQ-I-10, escolha visual | só alerta + texto do sistema (3A) |
 | DD14 | **Espera: cartão no lugar do resultado** (escolha 5B) com "Consultando… N s" e uma frase explicando o que está acontecendo; botão desabilitado | escolha visual | contador só no botão (5A) |
 | DD15 | **Versões**: `fastapi==0.162.0` (23/10), `uvicorn==0.54.0` (25/09), `pydantic==2.14.1` (11/10), imagem `python:3.12.15-slim` | regra das 2 semanas | versões mais novas (menos de 2 semanas) |
+| DD16 | **Fundo decorativo único**: um SVG de traço fino (uma nuvem e um avião cruzando), fixo no canto inferior direito, 11–12 % de opacidade, `aria-hidden`, sem interação, escondido com `prefers-contrast: more`. A carta sinótica da primeira versão foi tirada (poluía) | pedido do grupo, 10/11/2026 | rosa dos ventos com avião; carta sinótica |
+| DD17 | **Logo do grupo no cabeçalho** (`docs/imagens/logo_com_fundo.jpeg` → PNG de fundo transparente, ~70 KB, embutido na página como `data:`; segue valendo REQ-I-16). Feita para o escuro; no tema claro a página inverte a luminosidade mantendo o matiz (`filter: invert(1) hue-rotate(180deg)`). Fica dentro do `<h1>` com `alt` "AgenteVFR — meteorologia de aviação" | pedido do grupo, 10/11/2026 | texto "AgenteVFR"; faixa escura só para a logo |
 
 ## 2. Arquivos
 
@@ -75,7 +77,7 @@ Um único `Agente` por processo (D6), criado em `criar_app`.
 | `--bloqueio` | fundo `#FEF3C7`, texto `#78350F` | 8,15:1 |
 | `--erro` | fundo `#FEE2E2`, texto `#7F1D1D` | 8,20:1 |
 
-Espaçamento em múltiplos de 8 px; texto base 16 px, altura de linha 1,5; alvos clicáveis ≥ 44 px.
+Espaçamento em múltiplos de 8 px; texto base 16 px, altura de linha 1,5; alvos clicáveis ≥ 44 px (exceção pedida pelo grupo: chips de exemplo e execuções gravadas com 34 px, fonte 13 px).
 
 ## 5. Página: comportamento
 

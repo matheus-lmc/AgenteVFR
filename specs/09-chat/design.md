@@ -1,6 +1,6 @@
 # 09 — Interface em chat (design curto)
 
-Status: **aguardando aprovação** (12/11/2026). Muda só a apresentação da página; regra, harness, agente e API ficam
+Status: **aprovada em 12/11/2026; implementada no branch chat-ui**. Muda só a apresentação da página; regra, harness, agente e API ficam
 como estão.
 
 ## Por quê
@@ -22,7 +22,7 @@ o campo embaixo, a conversa em cima, o AgenteVFR respondendo em balões com avat
 - **Layout de chat:** cabeçalho fino (avatar, "AgenteVFR", saúde do modelo, botão de tema), conversa rolável no meio,
   barra fixa embaixo com campo + botão de enviar (ícone de seta). Enter envia. Rola sozinho para a última mensagem.
 - **Balão do usuário** à direita (azul, cantos de 16 px). **Balão do agente** à esquerda, cinza claro, com avatar
-  (avião) — no tema escuro, as mesmas cores atuais do tema escuro.
+  (imagem do piloto, JPEG embutido, a pedido do grupo; não o ícone de avião) — no tema escuro, as mesmas cores atuais do tema escuro.
 - **Espera:** balão do agente com três pontinhos animados + "N s" (respeita `prefers-reduced-motion`).
 - **Status (abordagem 1):** ao chegar a resposta, linhas discretas centralizadas, tiradas dos `passos` do traço, nesta
   ordem e com intervalo curto (~250 ms; sem animação se `prefers-reduced-motion`):
@@ -53,6 +53,9 @@ o campo embaixo, a conversa em cima, o AgenteVFR respondendo em balões com avat
 REQ-I-08 a 16: veredito só do código; texto do modelo sempre como texto (`textContent`, nunca `innerHTML`); sem
 recursos externos; pt-BR; contraste AA; `aria-live` na conversa. Os testes de `tests/test_main.py` que leem o HTML
 continuam passando.
+
+Exceção: a página de chat abandona o contador visível de caracteres do REQ-I-07
+(`specs/04-interface/requisitos.md`). O `maxlength=500` continua; o contador segue em `/classico`.
 
 ## Reserva para a demo (escolha do Claude)
 

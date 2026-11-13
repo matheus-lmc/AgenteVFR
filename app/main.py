@@ -63,7 +63,7 @@ def criar_app(*, agente=None, pasta_traces: Path | None = None, pasta_demo: Path
         return FileResponse(INDEX, media_type="text/html")
 
     @app.get("/classico", include_in_schema=False)
-    def pagina_classica():  # interface anterior, preservada até a troca da Task 2
+    def pagina_classica():  # backup permanente da interface anterior (plano B da demo)
         return FileResponse(CLASSICO, media_type="text/html")
 
     @app.post("/api/perguntar")

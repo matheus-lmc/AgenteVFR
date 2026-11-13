@@ -477,6 +477,14 @@ def test_req_h12_recusa_preenche_so_o_decodificado():
     ("E daqui a dois dias?", "previsao_alem_taf"),
     ("Qual o melhor dia pra ir pra Miami nos próximos 5 dias?", "previsao_alem_taf"),
     ("E no mês que vem?", "previsao_alem_taf"),
+    ("Calcule a integral de x² de 0 a 2", "fora_do_tema"),
+    ("Qual a derivada de sen(x)?", "fora_do_tema"),
+    ("Resolve essa equação: 2x + 3 = 7", "fora_do_tema"),
+    ("Escreve um código em Python que ordena uma lista", "fora_do_tema"),
+    ("Me passa uma receita de bolo", "fora_do_tema"),
+    ("Escreve um poema sobre o mar", "fora_do_tema"),
+    ("Conta uma piada", "fora_do_tema"),
+    ("Traduza 'céu limpo' para o inglês", "fora_do_tema"),
 ])
 def test_req_h13_categorias(pergunta, categoria):
     r = prefiltrar_pergunta(pergunta)
@@ -496,6 +504,11 @@ def test_req_h13_ignora_maiusculas_e_acentos(pergunta):
     "Como está o tempo em SBGR?",
     "Qual a melhor janela para voar VFR em Congonhas nas próximas horas?",
     "O teto em Curitiba está acima dos mínimos?",
+    "O que significa VMC?",
+    "Oi, tudo bem?",
+    "Traduza este METAR: SBGR 131200Z 09005KT 9999 FEW030 22/15 Q1018",  # revisão do PR #5
+    "Pode traduzir o TAF de Congonhas?",
+    "Qual a redação padrão de um METAR?",
 ])
 def test_req_h13_perguntas_normais_passam(pergunta):
     assert prefiltrar_pergunta(pergunta) is None
@@ -507,7 +520,9 @@ def test_req_h13_manipulacao_tem_precedencia():
 
 def test_req_h13_termos_num_unico_lugar():
     termos = harness.TERMOS_FORA_DE_ESCOPO
-    assert set(termos) == {"pedido_ifr", "pressao_operacional", "manipulacao_regra", "previsao_alem_taf"}
+    assert set(termos) == {"pedido_ifr", "pressao_operacional", "manipulacao_regra", "previsao_alem_taf",
+                           "fora_do_tema"}
+    assert set(harness.MOTIVOS_PERGUNTA) == set(termos)
 
 
 # --------------------------------------------------------------------------- REQ-H-14/15 verificador
@@ -613,3 +628,68 @@ def test_req_h15_recusa_descarta_explicacao_sem_marcar_bloqueio():
     assert v.bloqueada is False
     assert v.origem == "texto_modelo"
     assert v.texto_final == texto_modelo(RESUMO_RECUSA)
+
+
+# --------------------------------------------------------------------------- REQ-H-16 conversa sem consulta
+
+@pytest.mark.parametrize("texto", [
+    "Olá! Sou o AgenteVFR. Pergunte sobre um aeródromo brasileiro e eu consulto o METAR.",
+    "VMC significa condições meteorológicas visuais; o mínimo usado aqui é teto de 1500 ft e visibilidade de 5000 m.",
+    "De qual aeródromo você quer saber? Pode dizer o nome da cidade.",
+    "Um METAR é o boletim do aeródromo. Me informe o código ICAO do aeródromo que quer consultar.",
+    "Os mínimos VFR aqui são 1500/5000.",  # revisão do PR #5: barra não é conta
+    "Hoje é 13/11, qual aeródromo?",
+    "O ZULU time é UTC.",
+])
+def test_req_h16_conversa_sem_veredito_passa(texto):
+    assert harness.verificar_conversa(texto) is None
+
+
+@pytest.mark.parametrize("texto, regra", [
+    ("", "conversa_vazia"),
+    ("Em SBGR o tempo costuma ser bom.", "conversa_cita_aerodromo"),
+    ("O KJFK está fora do Brasil.", "conversa_cita_aerodromo"),
+    ("Agora tem BKN015 por lá.", "conversa_cita_dado"),
+    ("Guarulhos está VMC agora.", "conversa_com_veredito"),
+    ("Congonhas está em IMC.", "conversa_com_veredito"),
+    ("É possível voar VFR hoje.", "conversa_com_veredito"),
+    ("Pode ir tranquilo.", "conversa_com_veredito"),
+    ("Não dá pra ir hoje.", "conversa_com_veredito"),
+    ("O tempo está bom em Curitiba.", "conversa_com_veredito"),
+    ("A integral de x² de 0 a 2 é 8/3.", "conversa_fora_do_tema"),
+    ("∫ x dx = x²/2 + C", "conversa_fora_do_tema"),
+    ("2 + 2 = 4", "conversa_fora_do_tema"),
+    ("Olá! " * 120, "conversa_longa"),
+    ("Está liberado para o voo.", "conversa_com_veredito"),  # revisão do PR #5: era fail-open
+    ("Você está autorizado a decolar.", "conversa_com_veredito"),
+    ("É seguro para voar hoje.", "conversa_com_veredito"),
+    ("Sem restrições hoje.", "conversa_com_veredito"),
+])
+def test_req_h16_conversa_com_condicao_bloqueada(texto, regra):
+    assert harness.verificar_conversa(texto)[0] == regra
+
+
+@pytest.mark.parametrize("pergunta", [
+    "Oi, tudo bem?", "O que é um METAR?", "O que significa IMC?", "Como você funciona?", "Bom dia!",
+    "Qual o mínimo de visibilidade pra VFR?", "Como está o JFK em Nova York para VFR?", "Obrigado!",
+])
+def test_req_h16_pergunta_no_tema(pergunta):
+    assert harness.pergunta_no_tema(pergunta) is True
+
+
+@pytest.mark.parametrize("pergunta", [
+    "Quanto é 15 vezes 23?", "Me explica a teoria da relatividade", "Quem ganhou a Copa de 2002?",
+    "Você sabe fazer bolo de cenoura?",
+])
+def test_req_h16_pergunta_fora_do_tema(pergunta):
+    assert harness.pergunta_no_tema(pergunta) is False
+
+
+@pytest.mark.parametrize("pergunta, esperado", [
+    ("Posso ir VFR em Guarulhos?", True), ("SBGR está VMC?", True), ("Como está SBGR agora?", True),
+    ("Dá pra decolar de Curitiba?", True), ("Congonhas está aberto?", True),
+    ("Oi, tudo bem?", False), ("O que significa IMC?", False), ("Como está o tempo?", False),
+    ("Qual o código ICAO de Guarulhos?", False),
+])
+def test_req_h16_pergunta_pede_consulta(pergunta, esperado):
+    assert harness.pergunta_pede_consulta(pergunta) is esperado

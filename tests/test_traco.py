@@ -53,7 +53,7 @@ def test_req_a13_tipo_de_passo_invalido(tmp_path):
 
 
 def test_req_a13_tipos_permitidos():
-    assert TIPOS_PASSO == {"prefiltro", "modelo", "ferramenta", "harness", "verificador", "erro"}
+    assert TIPOS_PASSO == {"prefiltro", "modelo", "ferramenta", "harness", "verificador", "conversa", "erro"}
 
 
 def test_req_a13_utf8_legivel_e_objetos_nao_json(tmp_path):

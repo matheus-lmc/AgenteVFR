@@ -15,7 +15,8 @@ import httpx
 import pytest
 
 from app import harness, harness_taf, prompts
-from app.agente import Agente, ClienteOllama, ErroModelo
+from app import agente as agente_mod
+from app.agente import MOTIVOS_AGENTE, Agente, ClienteOllama, ErroModelo
 from app.ferramentas import ResultadoBusca
 
 UTC = timezone.utc
@@ -178,7 +179,7 @@ def test_req_a01_pergunta_normal_passa_no_prefiltro(rodar):
 
 def test_req_a02_ferramentas_enviadas(rodar):
     _, modelo, _, _ = rodar(PERGUNTA, ferramentas_(chamada("buscar_metar", icao="SBGR")), texto(COERENTE_SBGR))
-    assert [f["function"]["name"] for f in modelo.recebidas[0][1]] == ["buscar_metar", "avaliar_janela"]
+    assert [f["function"]["name"] for f in modelo.recebidas[0][1]] == ["buscar_metar", "avaliar_janela", "conversar"]
 
 
 def test_req_a02_ferramenta_desconhecida(rodar):
@@ -276,6 +277,121 @@ def test_req_a05_sem_avaliacao_descarta_o_texto(rodar):
     assert len(modelo.recebidas) == 2
     assert "VMC" not in r.explicacao
     assert any(p.get("regra") == "sem_avaliacao" for p in passos(traco, "erro"))
+
+
+# --------------------------------------------------------------------------- REQ-A-16 conversa sem consulta
+
+def test_req_a16_conversa_sem_consulta_sai_como_texto(rodar):
+    oi = "Olá! Pergunte sobre um aeródromo brasileiro que eu consulto o METAR."
+    r, modelo, buscas, traco = rodar("Oi, tudo bem?", texto(oi), texto(oi))
+    assert r.veredito == "CONVERSA"
+    assert r.explicacao == oi and r.origem_explicacao == "modelo"
+    assert r.avaliacoes == [] and r.janelas == [] and r.bloqueio is None
+    assert buscas.chamadas == [] and len(modelo.recebidas) == 2  # o lembrete continua (REQ-A-05)
+    conversa = passos(traco, "conversa")
+    assert len(conversa) == 1 and conversa[0]["passou"] is True and conversa[0]["regra"] is None
+    assert not passos(traco, "erro")
+
+
+def test_req_a16_conversa_com_veredito_vira_recusa(rodar):
+    r, _, _, traco = rodar("Oi", texto("Guarulhos está VMC."), texto("Guarulhos está VMC, pode ir."))
+    assert r.veredito == "RECUSA" and "VMC" not in r.explicacao
+    assert passos(traco, "conversa")[0]["passou"] is False
+    assert passos(traco, "conversa")[0]["regra"] == "conversa_com_veredito"
+    assert any(p.get("regra") == "sem_avaliacao" for p in passos(traco, "erro"))
+
+
+def test_req_a16_consulta_que_falhou_nao_vira_conversa(rodar):
+    r, _, _, traco = rodar(PERGUNTA, ferramentas_(chamada("buscar_metar", icao="SB")),
+                           texto("Olá, de qual aeródromo?"), texto("Olá, de qual aeródromo?"))
+    assert r.veredito == "RECUSA"
+    assert not passos(traco, "conversa")
+
+
+def test_req_a16_ferramenta_conversar_sai_como_texto(rodar):
+    oi = "Olá! Qual aeródromo você quer consultar?"
+    r, modelo, buscas, traco = rodar("Oi, tudo bem?", ferramentas_(chamada("conversar", mensagem=oi)))
+    assert r.veredito == "CONVERSA" and r.explicacao == oi and r.origem_explicacao == "modelo"
+    assert buscas.chamadas == [] and len(modelo.recebidas) == 1   # sem lembrete nem segunda chamada
+    assert passos(traco, "ferramenta")[0]["nome"] == "conversar"
+    assert passos(traco, "conversa")[0]["passou"] is True
+
+
+def test_req_a16_ferramenta_conversar_passa_pela_trava(rodar):
+    r, _, buscas, traco = rodar("Oi", ferramentas_(chamada("conversar", mensagem="SBGR está VMC, pode ir.")))
+    assert r.veredito == "RECUSA" and "VMC" not in r.explicacao
+    assert passos(traco, "conversa")[0]["regra"] == "conversa_cita_aerodromo"
+    assert buscas.chamadas == []
+
+
+@pytest.mark.parametrize("argumentos", [{}, {"mensagem": 3}, {"mensagem": ""}])
+def test_req_a16_ferramenta_conversar_sem_mensagem_vira_recusa(rodar, argumentos):
+    r, _, _, traco = rodar("Oi", ferramentas_(chamada("conversar", **argumentos)))
+    assert r.veredito == "RECUSA"
+    assert passos(traco, "conversa")[0]["regra"] == "conversa_vazia"
+
+
+def test_req_a16_conversar_fora_do_tema_descarta_a_mensagem(rodar):
+    r, _, buscas, traco = rodar("Quanto é a área de um círculo de raio 2?",
+                                ferramentas_(chamada("conversar", mensagem="A área é 4π.")))
+    assert r.veredito == "RECUSA" and r.motivo == MOTIVOS_AGENTE["sem_tema"]
+    assert "4π" not in r.explicacao and r.origem_explicacao == "texto_modelo"
+    assert passos(traco, "conversa")[0] == {**passos(traco, "conversa")[0], "passou": False, "regra": "sem_tema"}
+    assert buscas.chamadas == []
+
+
+def test_req_a16_texto_sem_ferramenta_fora_do_tema_vira_recusa(rodar):
+    r, _, _, traco = rodar("Quanto é 15 vezes 23?", texto("345."), texto("É 345."))
+    assert r.veredito == "RECUSA" and "345" not in r.explicacao
+    assert passos(traco, "conversa")[0]["regra"] == "sem_tema"
+
+
+def test_req_a16_prefiltro_fora_do_tema_nem_chama_o_modelo(rodar):
+    r, modelo, _, traco = rodar("Calcule a integral de x² de 0 a 2")
+    assert r.veredito == "RECUSA" and modelo.recebidas == []
+    assert passos(traco, "prefiltro")[0]["regra"] == "fora_do_tema"
+
+
+PERGUNTA_SEM_DECISAO = "Como está Guarulhos?"
+
+
+def test_req_a16_conversar_depois_de_consulta_e_ignorada(rodar):
+    r, modelo, _, _ = rodar(PERGUNTA_SEM_DECISAO, ferramentas_(chamada("buscar_metar", icao="SBGR")),
+                            ferramentas_(chamada("conversar", mensagem="Olá!")), texto(COERENTE_SBGR))
+    assert r.veredito == "VMC"
+    assert agente_mod.ERRO_CONVERSAR_DEPOIS in mensagens_tool(modelo, 2)[-1]["content"]
+
+
+def test_req_a16_conversar_junto_com_consulta_e_ignorada(rodar):
+    r, modelo, _, _ = rodar(PERGUNTA_SEM_DECISAO, ferramentas_(chamada("conversar", mensagem="Olá!"),
+                                                               chamada("buscar_metar", icao="SBGR")),
+                            texto(COERENTE_SBGR))
+    assert r.veredito == "VMC"
+    assert agente_mod.ERRO_CONVERSAR_DEPOIS in mensagens_tool(modelo, 1)[0]["content"]
+
+
+def test_req_a16_conversar_depois_de_icao_invalido_nao_vira_conversa(rodar):  # revisão do PR #5
+    r, modelo, _, traco = rodar("Oi, tudo bem?", ferramentas_(chamada("buscar_metar", icao="SB")),
+                                ferramentas_(chamada("conversar", mensagem="Olá!")),
+                                texto("Olá!"), texto("Olá!"))
+    assert r.veredito == "RECUSA"
+    assert not passos(traco, "conversa")
+    assert agente_mod.ERRO_CONVERSAR_DEPOIS in mensagens_tool(modelo, 2)[-1]["content"]
+
+
+@pytest.mark.parametrize("pergunta", ["Posso ir VFR em Guarulhos?", "SBGR está VMC?", "Como está SBGR agora?"])
+def test_req_a16_conversar_em_pergunta_de_consulta_volta_ao_modelo(rodar, pergunta):  # revisão do PR #5
+    r, modelo, _, traco = rodar(pergunta, ferramentas_(chamada("conversar", mensagem="Qual aeródromo?")),
+                                ferramentas_(chamada("buscar_metar", icao="SBGR")), texto(COERENTE_SBGR))
+    assert r.veredito == "VMC"
+    assert agente_mod.ERRO_CONVERSAR_CONSULTA in mensagens_tool(modelo, 1)[0]["content"]
+    assert not passos(traco, "conversa")
+
+
+def test_req_a16_texto_sem_ferramenta_em_pergunta_de_consulta_vira_recusa(rodar):
+    r, _, _, traco = rodar("Posso ir VFR em Guarulhos?", texto("Qual aeródromo?"), texto("Qual aeródromo?"))
+    assert r.veredito == "RECUSA"
+    assert passos(traco, "conversa")[0]["regra"] == "pergunta_pede_consulta"
 
 
 # --------------------------------------------------------------------------- REQ-A-06 falha do modelo

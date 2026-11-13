@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
-TIPOS_PASSO = {"prefiltro", "modelo", "ferramenta", "harness", "verificador", "erro"}
+TIPOS_PASSO = {"prefiltro", "modelo", "ferramenta", "harness", "verificador", "conversa", "erro"}
 
 
 class Traco:

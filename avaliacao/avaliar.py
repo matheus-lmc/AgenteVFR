@@ -43,6 +43,7 @@ RESULTADOS = BASE / "resultados"
 UTC = timezone.utc
 CRITERIOS = ("consistencia", "teto_visibilidade", "sem_invencao")
 RECUSA_POR_DADO = {"harness:dado_desatualizado", "harness:sem_dado", "busca:sem_dado"}
+SEM_VEREDITO = {"RECUSA", "CONVERSA"}  # CONVERSA (REQ-A-16): não deu veredito; conta como recusa nas métricas
 
 
 # ============================================================================ REQ-V-01 harness × gabarito
@@ -90,6 +91,8 @@ def classificar_icaos(consultados: list[str], esperados: list[str]) -> str:
 
 
 def origem_recusa(traco: dict, veredito: str) -> str | None:
+    if veredito == "CONVERSA":
+        return "agente:conversa"
     if veredito != "RECUSA":
         return None
     passos = traco.get("passos", [])
@@ -99,6 +102,9 @@ def origem_recusa(traco: dict, veredito: str) -> str | None:
     for p in passos:
         if p.get("tipo") == "erro":
             return f"agente:{p.get('regra')}"
+    for p in passos:
+        if p.get("tipo") == "conversa" and p.get("regra") == "sem_tema":
+            return "agente:sem_tema"
     for p in passos:
         if p.get("tipo") == "harness" and p.get("codigo_recusa"):
             return f"harness:{p['codigo_recusa']}"
@@ -110,7 +116,7 @@ def origem_recusa(traco: dict, veredito: str) -> str | None:
 
 
 def eh_falsa_recusa(caso: dict, resposta: dict, origem: str | None) -> bool:
-    if caso.get("tipo") != "normal" or resposta.get("veredito") != "RECUSA":
+    if caso.get("tipo") != "normal" or resposta.get("veredito") not in SEM_VEREDITO:
         return False
     if origem in RECUSA_POR_DADO:  # dado velho/ausente do aeródromo certo: a recusa é a resposta certa
         recusados = {a["icao"] for a in resposta.get("avaliacoes", []) if a.get("veredito") == "RECUSA"}
@@ -200,7 +206,7 @@ def resumir(harness_linhas: list[dict], agente_linhas: list[dict], juiz_linhas: 
         r["prompts"][prompt] = {
             "icao_exato": _par(sum(l["classe_icao"] == "exato" for l in normais), len(normais)),
             "icao_classes": dict(Counter(l["classe_icao"] for l in normais)),
-            "recusa_correta": _par(sum(l["veredito"] == "RECUSA" for l in recusas), len(recusas)),
+            "recusa_correta": _par(sum(l["veredito"] in SEM_VEREDITO for l in recusas), len(recusas)),
             "falsa_recusa": _par(sum(bool(l["falsa_recusa"]) for l in normais), len(normais)),
             "bloqueios": sum(bool(l["bloqueio"]) for l in ls),
             "tokens_medios": round(statistics.mean(l["tokens"] for l in com_modelo)) if com_modelo else 0,
@@ -324,12 +330,15 @@ def rodar_agente(casos: dict, versoes: list[str], ollama: ClienteOllama, pasta_t
     mundo = json.loads((BASE / casos["mundo"]).read_text(encoding="utf-8"))
     relogio_fixo = datetime.fromisoformat(casos["relogio"].replace("Z", "+00:00"))
     relogio = lambda: relogio_fixo  # noqa: E731
-    original = (prompts.PROMPT_SISTEMA, prompts.VERSAO_PROMPT)
+    original = (prompts.PROMPT_SISTEMA, prompts.VERSAO_PROMPT, prompts.LEMBRETE_FERRAMENTA, prompts.FERRAMENTAS)
     linhas = []
     try:
         for v in versoes:
             prompts.PROMPT_SISTEMA = getattr(prompts, f"PROMPT_SISTEMA_{v.upper()}")
             prompts.VERSAO_PROMPT = v
+            prompts.LEMBRETE_FERRAMENTA = getattr(prompts, f"LEMBRETE_FERRAMENTA_{v.upper()}",
+                                                  prompts.LEMBRETE_FERRAMENTA_V1)
+            prompts.FERRAMENTAS = getattr(prompts, f"FERRAMENTAS_{v.upper()}", prompts.FERRAMENTAS_V3)
             cliente = cliente_mundo(mundo, relogio)
             agente = Agente(ollama=ollama, buscar_metar=cliente.buscar_metar, buscar_taf=cliente.buscar_taf,
                             relogio=relogio, pasta_traces=pasta_traces)
@@ -355,7 +364,7 @@ def rodar_agente(casos: dict, versoes: list[str], ollama: ClienteOllama, pasta_t
                       f"{linha['classe_icao'] or linha['origem_recusa'] or ''} ({time.perf_counter() - t0:.0f} s)",
                       flush=True)
     finally:
-        prompts.PROMPT_SISTEMA, prompts.VERSAO_PROMPT = original
+        prompts.PROMPT_SISTEMA, prompts.VERSAO_PROMPT, prompts.LEMBRETE_FERRAMENTA, prompts.FERRAMENTAS = original
     return linhas
 
 
@@ -364,7 +373,11 @@ def main() -> int:
     p.add_argument("--so-harness", action="store_true", help="só REQ-V-01 (sem Ollama)")
     p.add_argument("--prompts", default="v1,v3", help="versões do prompt a comparar (padrão: v1,v3)")
     p.add_argument("--sem-juiz", action="store_true")
+    p.add_argument("--saida", default=None, help="pasta dos resultados (padrão: avaliacao/resultados)")
     a = p.parse_args()
+    global RESULTADOS
+    if a.saida:
+        RESULTADOS = Path(a.saida).resolve()
 
     RESULTADOS.mkdir(parents=True, exist_ok=True)
     casos = json.loads(CASOS.read_text(encoding="utf-8"))
@@ -381,7 +394,7 @@ def main() -> int:
         if not a.sem_juiz:
             juiz = ClienteOllama(temperatura=0)
             alvo = [l for l in agente_linhas if l["prompt"] == versoes[-1] and l["tipo"] == "normal"
-                    and l["origem_explicacao"] == "modelo"]
+                    and l["origem_explicacao"] == "modelo" and l["veredito"] != "CONVERSA"]
             for l in alvo:
                 notas, bruto = julgar(juiz, l["_resposta"])
                 juiz_linhas.append({"prompt": l["prompt"], "id": l["id"], "veredito": l["veredito"],

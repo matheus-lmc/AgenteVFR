@@ -66,6 +66,16 @@ A página atual é copiada, sem mudança, para `app/static/classico.html` e serv
 `main.py` + um teste). Se o chat der problema na apresentação, abre-se `/classico`. Tudo num branch `chat-ui`;
 merge só depois de testado no navegador com o Compose.
 
+## Revisão de 13/11/2026: resposta sem veredito vira texto
+
+Quando o agente devolve `veredito = "CONVERSA"` (nenhum aeródromo consultado; REQ-A-16 da spec 03), a resposta é um
+balão de texto simples com a mensagem do modelo, sem cartão, sem aeródromos e sem previsão, com "Ver traço da
+execução" recolhido. As linhas de status
+continuam e mostram "Modelo pediu conversar (responder sem consultar aeródromo)" e "Nenhum aeródromo consultado:
+resposta só de conversa, sem veredito". Se a trava (REQ-H-16)
+barrar o texto, aparece "Conversa bloqueada…" em destaque e o balão RECUSA de sempre. `/classico` mostra só o
+cartão de explicação.
+
 ## Fica para depois
 
 Streaming real (abordagem 2), memória de conversa ("e Guarulhos?"), confirmação do aeródromo (D1 da spec 08).

@@ -45,7 +45,15 @@ MOTIVOS_AGENTE = {
     "erro_modelo": "O modelo de linguagem não respondeu; não foi possível montar o briefing.",
     "limite_iteracoes": f"Limite de {MAX_CHAMADAS_FERRAMENTA} consultas por pergunta atingido sem resposta final.",
     "sem_avaliacao": "Nenhum aeródromo foi consultado; o sistema não responde sem dado.",
+    # REQ-A-16 (revisão do PR #5): neutro, porque a lista do tema também pode errar com pergunta legítima
+    "sem_tema": "Não identifiquei um aeródromo nem um assunto de voo ou meteorologia na pergunta. "
+                "Pergunte sobre um aeródromo brasileiro.",
 }
+ERRO_CONVERSAR_DEPOIS = ("conversar só vale sozinha, quando nenhum aeródromo foi consultado. "
+                         "Responda com base no que foi consultado.")
+ERRO_CONVERSAR_CONSULTA = ("A pergunta cita aeródromo ou pede decisão de voo: chame buscar_metar para o "
+                           "aeródromo citado em vez de conversar.")
+MOTIVO_CONVERSA = "Nenhum aeródromo consultado: resposta só de conversa, sem veredito."  # REQ-A-16
 MOTIVOS_BUSCA_TAF = {
     "sem_dado": "A API não tem TAF disponível para este aeródromo.",
     "fora_do_escopo": harness.MOTIVOS_RECUSA["fora_do_escopo"],
@@ -104,7 +112,7 @@ class RespostaAgente:
     """Resposta final (REQ-A-10). O veredito vem sempre de código."""
 
     id_traco: str
-    veredito: str
+    veredito: str               # "VMC" | "IMC" | "RECUSA" | "CONVERSA" (sem consulta, REQ-A-16)
     motivo: str
     avaliacoes: list[dict]
     explicacao: str
@@ -160,6 +168,22 @@ class Agente:
             return resposta("RECUSA", motivo, f"{motivo} Consulte o briefing oficial (REDEMET/AIS).",
                             "texto_modelo")
 
+        def conversa(texto: str) -> RespostaAgente:  # REQ-A-16: sem consulta, só sai se não afirmar condição
+            if not harness.pergunta_no_tema(pergunta):  # sem termo do tema: o texto do modelo é descartado
+                traco.passo("conversa", passou=False, regra="sem_tema", trecho=None)
+                return recusa(MOTIVOS_AGENTE["sem_tema"])
+            if harness.pergunta_pede_consulta(pergunta):  # "posso ir?", "SBGR está VMC?": só com consulta
+                traco.passo("conversa", passou=False, regra="pergunta_pede_consulta", trecho=None)
+                traco.passo("erro", regra="sem_avaliacao", mensagem=MOTIVOS_AGENTE["sem_avaliacao"])
+                return recusa(MOTIVOS_AGENTE["sem_avaliacao"])
+            achado = harness.verificar_conversa(texto)
+            traco.passo("conversa", passou=achado is None, regra=achado[0] if achado else None,
+                        trecho=achado[1] if achado else None)
+            if achado is None:
+                return resposta("CONVERSA", MOTIVO_CONVERSA, texto.strip(), "modelo")
+            traco.passo("erro", regra="sem_avaliacao", mensagem=MOTIVOS_AGENTE["sem_avaliacao"])
+            return recusa(MOTIVOS_AGENTE["sem_avaliacao"])
+
         # Pré-filtro em código, antes do modelo (REQ-A-01)
         if not isinstance(pergunta, str) or not pergunta.strip() or len(pergunta) > MAX_CARACTERES_PERGUNTA:
             motivo = MOTIVOS_AGENTE["pergunta_invalida"]
@@ -198,7 +222,17 @@ class Agente:
                         return recusa(MOTIVOS_AGENTE["limite_iteracoes"])
                     chamadas += 1
                     nome, argumentos = _ler_chamada(pedida)
-                    janela = self._executar(nome, argumentos, traco, avaliacoes, nomes, janelas)
+                    if nome == "conversar":  # REQ-A-16: só sozinha, como primeira chamada e sem pedido de consulta
+                        pede_consulta = harness.pergunta_pede_consulta(pergunta)
+                        if len(pedidas) == 1 and chamadas == 1 and not pede_consulta:
+                            argumentos = argumentos if isinstance(argumentos, dict) else {}
+                            traco.passo("ferramenta", nome=nome, argumentos=argumentos, resultado=None, janela=None)
+                            texto_conversa = argumentos.get("mensagem")
+                            return conversa(texto_conversa if isinstance(texto_conversa, str) else "")
+                        janela = {"erro": ERRO_CONVERSAR_CONSULTA if pede_consulta else ERRO_CONVERSAR_DEPOIS}
+                        traco.passo("ferramenta", nome=nome, argumentos=argumentos, resultado=None, janela=janela)
+                    else:
+                        janela = self._executar(nome, argumentos, traco, avaliacoes, nomes, janelas)
                     mensagens.append({"role": "tool", "tool_name": nome,
                                       "content": json.dumps(janela, ensure_ascii=False)})
                 continue
@@ -211,6 +245,8 @@ class Agente:
                 mensagens.append({"role": "assistant", "content": texto})
                 mensagens.append({"role": "user", "content": prompts.LEMBRETE_FERRAMENTA})
                 continue
+            if chamadas == 0:  # REQ-A-16: nada consultado → pode sair como conversa
+                return conversa(texto)
             traco.passo("erro", regra="sem_avaliacao", mensagem=MOTIVOS_AGENTE["sem_avaliacao"])
             return recusa(MOTIVOS_AGENTE["sem_avaliacao"])
 
